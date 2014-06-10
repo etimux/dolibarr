@@ -1,5 +1,5 @@
 <?php
-/* Copyright (C) 2004-2014	Laurent Destailleur		<eldy@users.sourceforge.net>
+/* Copyright (C) 2004-2013	Laurent Destailleur		<eldy@users.sourceforge.net>
  * Copyright (C) 2006		Rodolphe Quiedeville	<rodolphe@quiedeville.org>
  * Copyright (C) 2007-2012	Regis Houssin			<regis.houssin@capnetworks.com>
  * Copyright (C) 2011		Philippe Grand			<philippe.grand@atoo-net.com>
@@ -45,7 +45,8 @@ if (empty($user->id) && ! empty($_SESSION['dol_login'])) $user->fetch('',$_SESSI
 
 // Define css type
 header('Content-type: text/css');
-// Important: Following code is to avoid page request by browser and PHP CPU at each Dolibarr page access.
+// Important: Following code is to avoid page request by browser and PHP CPU at
+// each Dolibarr page access.
 if (empty($dolibarr_nocache)) header('Cache-Control: max-age=3600, public, must-revalidate');
 else header('Cache-Control: no-cache');
 
@@ -57,12 +58,14 @@ if (GETPOST('theme')) $conf->theme=GETPOST('theme');  // If theme was forced on 
 $langs->load("main",0,1);
 $right=($langs->trans("DIRECTION")=='rtl'?'left':'right');
 $left=($langs->trans("DIRECTION")=='rtl'?'right':'left');
+$fontsize=empty($conf->dol_optimize_smallscreen)?'12':'12';
+$fontsizesmaller=empty($conf->dol_optimize_smallscreen)?'11':'11';
 
 $path='';    	// This value may be used in future for external module to overwrite theme
 $theme='eldy';	// Value of theme
 if (! empty($conf->global->MAIN_OVERWRITE_THEME_RES)) { $path='/'.$conf->global->MAIN_OVERWRITE_THEME_RES; $theme=$conf->global->MAIN_OVERWRITE_THEME_RES; }
 
-// Define image path files and other constants
+// Define image path files
 $fontlist='arial,tahoma,verdana,helvetica';    //$fontlist='Verdana,Helvetica,Arial,sans-serif';
 $img_head=dol_buildpath($path.'/theme/'.$theme.'/img/headbg2.jpg',1);
 $img_button=dol_buildpath($path.'/theme/'.$theme.'/img/button_bg.png',1);
@@ -105,10 +108,11 @@ $colorbacklineimpairhover=(230+round(($isred+$isgreen+$isblue)/9)).','.(230+roun
 $colorbacklinepair1='255,255,255';    // line pair
 $colorbacklinepair2='255,255,255';    // line pair
 $colorbacklinepairhover=(230+round(($isred+$isgreen+$isblue)/9)).','.(230+round(($isred+$isgreen+$isblue)/9)).','.(230+round(($isred+$isgreen+$isblue)/9));
+//$colorbackbody='#ffffff url('.$img_head.') 0 0 no-repeat;';
 $colorbackbody='#fcfcfc';
 $colortext='40,40,40';
-$fontsize='12';
-$fontsizesmaller='11';
+$fontsize=empty($conf->dol_optimize_smallscreen)?'12':'14';
+$fontsizesmaller=empty($conf->dol_optimize_smallscreen)?'11':'14';
 
 // Eldy colors
 if (empty($conf->global->THEME_ELDY_ENABLE_PERSONALIZED))
@@ -224,7 +228,9 @@ body {
 	background: <?php print $colorbackbody; ?>;
 <?php } ?>
 	color: #101010;
+	<?php if (empty($dol_use_jmobile) || 1==1) { ?>
 	font-size: <?php print $fontsize ?>px;
+	<?php } ?>
 	font-family: <?php print $fontlist ?>;
     margin-top: 0;
     margin-bottom: 0;
@@ -404,12 +410,8 @@ th .button {
 .hideonsmartphone { display: none; }
 .noenlargeonsmartphone { width : 50px !important; display: inline !important; }
 .maxwidthonsmartphone { max-width: 100px; }
-.maxwidth200onsmartphone { max-width: 200px; }
 <?php } ?>
 .linkobject { cursor: pointer; }
-<?php if (GETPOST("optioncss") == 'print') { ?>
-.hideonprint { display: none; }
-<?php } ?>
 
 
 /* ============================================================================== */
@@ -434,7 +436,6 @@ td.showDragHandle {
 
 #id-container {
 	margin-top: 8px;
-	margin-bottom: 8px;
 	display: table;
 	table-layout: fixed;
 }
@@ -601,10 +602,8 @@ li.tmenu, li.tmenusel {
 	<?php print $minwidthtmenu?'min-width: '.$minwidthtmenu.'px;':''; ?>
 	text-align: center;
 	vertical-align: bottom;
-	<?php if (empty($conf->global->MAIN_MENU_INVERT)) { ?>
 	float: <?php print $left; ?>;
     height: <?php print $heightmenu; ?>px;
-    <?php } ?>
 	position:relative;
 	display: block;
 	padding: 0px 0px 2px 0px;
@@ -785,7 +784,7 @@ foreach($mainmenuusedarray as $val)
 		$url=dol_buildpath($path.'/theme/'.$theme.'/img/menus/generic'.$generic.".png",1);
 		$found=1;
 		if ($generic < 4) $generic++;
-		print "/* A mainmenu entry but img file ".$val.".png not found (check /".$val."/img/".$val.".png), so we use a generic one */\n";
+		print "/* A mainmenu entry but img file ".$val.".png not found, so we use a generic one */\n";
 	}
 	if ($found)
 	{
@@ -855,7 +854,7 @@ form#login {
 }
 div#login_left, div#login_right {
 	display: inline-block;
-	min-width: 245px;
+	min-width: 250px;
 	padding-top: 10px;
 	text-align: center;
 	vertical-align: middle;
@@ -885,6 +884,8 @@ div.login_block table {
 }
 div.login {
 	white-space:nowrap;
+	/* padding: <?php echo ($conf->dol_optimize_smallscreen?'0':'8')?>px 0px 0px 0px; */
+    /* margin: 0px 0px 0px 8px; */
 	font-weight: bold;
 	float: right;
 }
@@ -1442,7 +1443,7 @@ a.tab:link, a.tab:visited, a.tab:hover, a.tab#active {
 	background-image: none !important;
 }
 
-.tabactive {
+a.tab#active {
 <?php if ($usecss3) { ?>
 /*    border-bottom: 1px solid rgb(<?php echo $colorbacktabactive; ?>) !important; */
 	background: rgba(<?php echo $colorbacktabcard2; ?>, 0.5)  url(<?php echo dol_buildpath($path.'/theme/'.$theme.'/img/nav-overlay3.png',1); ?>) 50% 0 repeat-x;
@@ -1574,8 +1575,9 @@ span.butAction, span.butActionDelete {
 	border-collapse: collapse;
 	border: 0px;
 	margin-left: 0px;
-	padding-<?php print $left; ?>: 0px !important;
-	padding-<?php print $right; ?>: 4px !important;
+	spacing-left: 0px;
+	padding-left: 0px;
+	padding-right: 4px;
 }
 .nocellnopadd {
 	list-style-type:none;
@@ -1839,9 +1841,6 @@ tr.liste_total td, form.liste_total div {
 	color: #202020;
 }
 
-.tableforservicepart1 .impair, .tableforservicepart1 .pair, .tableforservicepart2 .impair, .tableforservicepart2 .pair {
-	background: none;
-}
 
 /* Disable shadows */
 .noshadow {
@@ -2270,6 +2269,8 @@ li.cal_event       { border: none; list-style-type: none; }
 /*  Ajax - Liste deroulante de l'autocompletion                                   */
 /* ============================================================================== */
 
+.ui-widget-content { border: solid 1px rgba(0,0,0,.3); background: #fff; }
+
 .ui-autocomplete-loading { background: white url(<?php echo dol_buildpath($path.'/theme/'.$theme.'/img/working.gif',1) ?>) right center no-repeat; }
 .ui-autocomplete {
 	       position:absolute;
@@ -2483,7 +2484,7 @@ A.none, A.none:active, A.none:visited, A.none:hover {
 {
     line-height: 1em !important;
 }
-.ui-autocomplete-input { margin: 0; }
+.ui-autocomplete-input { margin: 0; padding: 2px; }
 
 
 /* ============================================================================== */
@@ -2502,6 +2503,8 @@ a.cke_dialog_ui_button
 	background-image: url(<?php echo $img_button ?>) !important;
 	background-position: bottom !important;
     border: 1px solid #C0C0C0 !important;
+	padding: 0.1em 0.7em !important;
+	margin: 0em 0.5em !important;
     -moz-border-radius:0px 5px 0px 5px !important;
 	-webkit-border-radius:0px 5px 0px 5px !important;
 	border-radius:0px 5px 0px 5px !important;
@@ -2512,11 +2515,6 @@ a.cke_dialog_ui_button
 .cke_dialog_ui_hbox_last
 {
 	vertical-align: bottom ! important;
-}
-.cke_editable
-{
-	line-height: 1.4 !important;
-	margin: 6px !important;
 }
 
 
@@ -2693,14 +2691,7 @@ div.dolEventError h1, div.dolEventError h2 {
 .sorting_desc { background: url('<?php echo dol_buildpath('/theme/'.$theme.'/img/sort_desc.png',1); ?>') no-repeat center right; }
 .sorting_asc_disabled  { background: url('<?php echo dol_buildpath('/theme/'.$theme.'/img/sort_asc_disabled',1); ?>') no-repeat center right; }
 .sorting_desc_disabled { background: url('<?php echo dol_buildpath('/theme/'.$theme.'/img/sort_desc_disabled',1); ?>') no-repeat center right; }
-.paginate_disabled_previous:hover, .paginate_enabled_previous:hover, .paginate_disabled_next:hover, .paginate_enabled_next:hover
-{
-	font-weight: normal;
-}
-.paginate_enabled_previous:hover, .paginate_enabled_next:hover
-{
-	text-decoration: underline !important;
-}
+
 
 /* For jquery plugin combobox */
 /* Disable this. It breaks wrapping of boxes
@@ -2725,11 +2716,9 @@ a.ui-link, a.ui-link:hover, .ui-btn:hover, span.ui-btn-text:hover, span.ui-btn-i
 	min-width: .4em;
 	padding-left: 10px;
 	padding-right: 10px;
-	<?php if (! empty($dol_use_jmobile)) { ?>
-	font-size: 13px;
-	<?php } else { ?>
+	<?php if (empty($dol_use_jmobile) || 1==1) { ?>
 	font-size: <?php print $fontsize ?>px;
-	<?php } ?>
+    <?php } ?>
 	/* white-space: normal; */		/* Warning, enable this break the truncate feature */
 }
 .ui-btn-icon-right .ui-btn-inner {
@@ -2827,7 +2816,7 @@ ul.ulmenu {
 
 /* Style for first level menu with jmobile */
 .ui-bar-b, .lilevel0 {
-	border: 1px solid #5f5f7a !important;
+	border: 1px solid #456f9a;
     background: rgb(<?php echo $colorbacktitle1; ?>);
     background-repeat: repeat-x;
 	<?php if ($usecss3) { ?>
@@ -2883,3 +2872,4 @@ border-top-right-radius: 6px;
 
 <?php
 if (is_object($db)) $db->close();
+?>

@@ -32,7 +32,7 @@
 
 //@ini_set('memory_limit', '64M');	// This may be useless if memory is hard limited by your PHP
 
-// For optional tuning. Enabled if environment variable DOL_TUNING is defined.
+// For optionnal tuning. Enabled if environment variable DOL_TUNING is defined.
 // A call first. Is the equivalent function dol_microtime_float not yet loaded.
 $micro_start_time=0;
 if (! empty($_SERVER['DOL_TUNING']))
@@ -80,14 +80,13 @@ function test_sql_and_script_inject($val, $type)
     // For SQL Injection (only GET and POST are used to be included into bad escaped SQL requests)
     if ($type != 2)
     {
-        $sql_inj += preg_match('/delete\s+from/i',	 $val);
-        $sql_inj += preg_match('/create\s+table/i',	 $val);
-        $sql_inj += preg_match('/update.+set.+=/i',  $val);
-        $sql_inj += preg_match('/insert\s+into/i', 	 $val);
-        $sql_inj += preg_match('/select.+from/i', 	 $val);
-        $sql_inj += preg_match('/union.+select/i', 	 $val);
-        $sql_inj += preg_match('/into\s+(outfile|dumpfile)/i',  $val);
-        $sql_inj += preg_match('/(\.\.%2f)+/i',		 $val);
+        $sql_inj += preg_match('/delete[\s]+from/i', $val);
+        $sql_inj += preg_match('/create[\s]+table/i', $val);
+        $sql_inj += preg_match('/update.+set.+=/i', $val);
+        $sql_inj += preg_match('/insert[\s]+into/i', $val);
+        $sql_inj += preg_match('/select.+from/i', $val);
+        $sql_inj += preg_match('/union.+select/i', $val);
+        $sql_inj += preg_match('/(\.\.%2f)+/i', $val);
     }
     // For XSS Injection done by adding javascript with script
     // This is all cases a browser consider text is javascript:
@@ -467,8 +466,7 @@ if (! defined('NOLOGIN'))
 
                 // Bad password. No authmode has found a good password.
                 $user->trigger_mesg=$langs->trans("ErrorBadLoginPassword").' - login='.GETPOST("username","alpha",2);
-                // We set a generic message if not defined inside function checkLoginPassEntity or subfunctions
-                if (empty($_SESSION["dol_loginmesg"])) $_SESSION["dol_loginmesg"]=$langs->trans("ErrorBadLoginPassword");
+                $_SESSION["dol_loginmesg"]=$langs->trans("ErrorBadLoginPassword");
 
                 // Call of triggers
                 include_once DOL_DOCUMENT_ROOT.'/core/class/interfaces.class.php';
@@ -482,7 +480,7 @@ if (! defined('NOLOGIN'))
         }
 
         // End test login / passwords
-        if (! $login || (in_array('ldap',$authmode) && empty($passwordtotest)))	// With LDAP we refused empty password because some LDAP are "opened" for anonymous access so connexion is a success.
+        if (! $login)
         {
             // We show login page
             dol_loginfunction($langs,$conf,(! empty($mysoc)?$mysoc:''));
@@ -961,7 +959,7 @@ function top_htmlhead($head, $title='', $disablejs=0, $disablehead=0, $arrayofjs
         print '<meta name="robots" content="noindex,nofollow">'."\n";      // Evite indexation par robots
         print '<meta name="author" content="Dolibarr Development Team">'."\n";
         $favicon=dol_buildpath('/theme/'.$conf->theme.'/img/favicon.ico',1);
-        if (! empty($conf->global->MAIN_FAVICON_URL)) $favicon=$conf->global->MAIN_FAVICON_URL;
+		if (! empty($conf->global->MAIN_FAVICON_URL)) $favicon=$conf->global->MAIN_FAVICON_URL;
         print '<link rel="shortcut icon" type="image/x-icon" href="'.$favicon.'"/>'."\n";
         if (empty($conf->global->MAIN_OPTIMIZEFORTEXTBROWSER)) print '<link rel="top" title="'.$langs->trans("Home").'" href="'.(DOL_URL_ROOT?DOL_URL_ROOT:'/').'">'."\n";
         if (empty($conf->global->MAIN_OPTIMIZEFORTEXTBROWSER)) print '<link rel="copyright" title="GNU General Public License" href="http://www.gnu.org/copyleft/gpl.html#SEC1">'."\n";
@@ -971,8 +969,8 @@ function top_htmlhead($head, $title='', $disablejs=0, $disablehead=0, $arrayofjs
         $appli='Dolibarr';
         if (!empty($conf->global->MAIN_APPLICATION_TITLE)) $appli=$conf->global->MAIN_APPLICATION_TITLE;
 
-        if ($title) print '<title>'.dol_htmlentities($appli.' - '.$title).'</title>';
-        else print "<title>".dol_htmlentities($appli)."</title>";
+        if ($title) print '<title>'.$appli.' - '.$title.'</title>';
+        else print "<title>".$appli."</title>";
         print "\n";
 
         $ext='';
@@ -1179,7 +1177,6 @@ function top_htmlhead($head, $title='', $disablejs=0, $disablehead=0, $arrayofjs
             {
             	// We must force not using ajax because cache of jquery does not load js of other pages.
             	// This also increase seriously speed onto mobile device where complex js code is very slow and memory very low.
-            	// Note: dol_use_jmobile=1 use jmobile without ajax, dol_use_jmobile=2 use jmobile with ajax
             	if (empty($conf->dol_use_jmobile) || ($conf->dol_use_jmobile != 2 && $conf->dol_use_jmobile != 3))
             	{
             		print '<script type="text/javascript">
@@ -1206,10 +1203,11 @@ function top_htmlhead($head, $title='', $disablejs=0, $disablehead=0, $arrayofjs
             {
                 print '<!-- Includes JS for CKEditor -->'."\n";
                 $pathckeditor=DOL_URL_ROOT.'/includes/ckeditor/';
-                $jsckeditor='ckeditor.js';
+                $jsckeditor='ckeditor_basic.js';
                 if (constant('JS_CKEDITOR'))	// To use external ckeditor 4 js lib
                 {
                 	$pathckeditor=constant('JS_CKEDITOR');
+                	$jsckeditor='ckeditor.js';
                 }
                 print '<script type="text/javascript">';
                 print 'var CKEDITOR_BASEPATH = \''.$pathckeditor.'\';'."\n";
@@ -1275,7 +1273,7 @@ function top_htmlhead($head, $title='', $disablejs=0, $disablehead=0, $arrayofjs
  *
  *  @param      string	$head    			Lines in the HEAD
  *  @param      string	$title   			Title of web page
- *  @param      string	$target  			Target to use in menu links (Example: '' or '_top')
+ *  @param      string	$target  			Target to use in menu links
  *	@param		int		$disablejs			Do not output links to js (Ex: qd fonction utilisee par sous formulaire Ajax)
  *	@param		int		$disablehead		Do not output head section
  *	@param		array	$arrayofjs			Array of js files to add in header
@@ -1355,6 +1353,22 @@ function top_menu($head, $title='', $target='', $disablejs=0, $disablehead=0, $a
     		</script>';
         }
 
+        /* This make menu bugged
+        if ($conf->use_javascript_ajax && ! empty($conf->global->MAIN_MENU_USE_JQUERY_ACCORDION) && empty($conf->dol_use_jmobile))
+        {
+            print "\n".'<script type="text/javascript">
+					jQuery(document).ready(function () {
+						jQuery( ".vmenu" ).accordion({
+							autoHeight: false,
+							event: "mouseover",
+							//collapsible: true,
+							//active: 2,
+							header: "> .blockvmenupair > .menu_titre"
+						});
+					});
+					</script>';
+        } */
+
         // Wrapper to show tooltips
         print "\n".'<script type="text/javascript">
                     jQuery(document).ready(function () {
@@ -1375,7 +1389,7 @@ function top_menu($head, $title='', $target='', $disablejs=0, $disablehead=0, $a
     if (empty($conf->dol_hide_topmenu))
     {
 	    // Show menu entries
-    	print '<div id="tmenu_tooltip'.(empty($conf->global->MAIN_MENU_INVERT)?'':'invert').'" class="tmenu">'."\n";
+    	print '<div id="tmenu_tooltip" class="tmenu">'."\n";
 	    $menumanager->atarget=$target;
 	    $menumanager->showmenu('top');      // This contains a \n
 	    print "</div>\n";
@@ -1432,11 +1446,11 @@ function top_menu($head, $title='', $target='', $disablejs=0, $disablehead=0, $a
 	    // Link info
 	    $logouttext='';
 	    $logouthtmltext=$appli.'<br>';
+	    $logouthtmltext.=$langs->trans("Logout").'<br>';
+	    //$logouthtmltext.="<br>";
 	    if ($_SESSION["dol_authmode"] != 'forceuser' && $_SESSION["dol_authmode"] != 'http')
 	    {
-	    	$logouthtmltext.=$langs->trans("Logout").'<br>';
-
-	    	$logouttext .='<a href="'.DOL_URL_ROOT.'/user/logout.php"';
+	        $logouttext .='<a href="'.DOL_URL_ROOT.'/user/logout.php"';
 	        //$logouttext .=empty($atarget?(' target="'.$atarget.'"'):'';
 	        $logouttext .='>';
 	        $logouttext .= img_picto($langs->trans('Logout'), 'logout.png', 'class="login"', 0, 0, 1);
@@ -1444,7 +1458,6 @@ function top_menu($head, $title='', $target='', $disablejs=0, $disablehead=0, $a
 	    }
 	    else
 	    {
-	    	$logouthtmltext.=$langs->trans("NoLogoutProcessWithAuthMode",$_SESSION["dol_authmode"]);
 	        $logouttext .= img_picto($langs->trans('Logout'), 'logout.png', 'class="login"', 0, 0, 1);
 	    }
 
@@ -1621,12 +1634,9 @@ function left_menu($menu_array_before, $helppagename='', $moresearchform='', $me
 		//Dolibarr version
 	    $doliurl='http://www.dolibarr.org';
 
-		//local communities
-		if (preg_match('/fr/i',$langs->defaultlang)) $doliurl='http://www.dolibarr.fr';
+	    //local communities
+	    if (preg_match('/fr/i',$langs->defaultlang)) $doliurl='http://www.dolibarr.fr';
 		if (preg_match('/es/i',$langs->defaultlang)) $doliurl='http://www.dolibarr.es';
-		if (preg_match('/de/i',$langs->defaultlang)) $doliurl='http://www.dolibarr.de';
-		if (preg_match('/it/i',$langs->defaultlang)) $doliurl='http://www.dolibarr.it';
-		if (preg_match('/gr/i',$langs->defaultlang)) $doliurl='http://www.dolibarr.gr';
 
 	    $appli='Dolibarr';
 	    if (! empty($conf->global->MAIN_APPLICATION_TITLE))
@@ -1790,7 +1800,7 @@ function getHelpParamFor($helppagename,$langs)
  *  @param  string	$title              Title search area
  *  @param  string	$htmlmodesearch     Value to set into parameter "mode_search" ('soc','contact','products','member',...)
  *  @param  string	$htmlinputname      Field Name input form
- *  @return	string
+ *  @return	void
  */
 function printSearchForm($urlaction,$urlobject,$title,$htmlmodesearch,$htmlinputname)
 {
@@ -1870,3 +1880,4 @@ if (! function_exists("llxFooter"))
     }
 }
 
+?>
