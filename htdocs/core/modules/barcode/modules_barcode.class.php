@@ -25,7 +25,7 @@ require_once DOL_DOCUMENT_ROOT.'/core/lib/functions.lib.php';
 
 
 /**
- *	Parent class for barcode document models
+ *	Parent class for barcode document modules
  */
 abstract class ModeleBarCode
 {
@@ -33,9 +33,9 @@ abstract class ModeleBarCode
 
 
 	/**
-	 * Return if a model can be used or not
+	 * Return if a module can be used or not
 	 *
-	 * @return		boolean     true if model can be used
+	 * @return		boolean     true if module can be used
 	 */
 	function isEnabled()
 	{
@@ -46,16 +46,16 @@ abstract class ModeleBarCode
 
 
 /**
- *	Parent class for barcode numbering models
+ *	Parent class for barcode numbering modules
  */
 abstract class ModeleNumRefBarCode
 {
 	var $error='';
 
-    /**     Return default description of numbering model
+    /**     Renvoi la description par defaut du modele de numerotation
      *
      *		@param	Translate	$langs		Object langs
-     *      @return string      			Descriptive text
+     *      @return string      			Texte descripif
      */
     function info($langs)
     {
@@ -63,17 +63,17 @@ abstract class ModeleNumRefBarCode
         return $langs->trans("NoDescription");
     }
 	
-    /**     Return model name
+    /**     Renvoi nom module
      *
      *		@param	Translate	$langs		Object langs
-     *      @return string      			Model name
+     *      @return string      			Nom du module
      */
     function getNom($langs)
     {
         return $this->nom;
     }
 	
-    /**     Return a numbering example 
+    /**     Renvoi un exemple de numerotation
      *
      *		@param	Translate	$langs		Object langs
      *      @return string      			Example
@@ -173,3 +173,4 @@ abstract class ModeleNumRefBarCode
     
 }
 
+?>

@@ -64,7 +64,7 @@ else if ($action == 'update')
 {
 	if (GETPOST('submit_GENBARCODE_LOCATION'))
 	{
-		$location = GETPOST('GENBARCODE_LOCATION','alpha');
+		$location = GETPOST('genbarcodelocation','alpha');
 		$res = dolibarr_set_const($db, "GENBARCODE_LOCATION",$location,'chaine',0,'',$conf->entity);
 	}
 	if (GETPOST('submit_PRODUIT_DEFAULT_BARCODE_TYPE'))
@@ -433,3 +433,4 @@ print "<br>";
 $db->close();
 
 llxFooter();
+?>

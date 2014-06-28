@@ -189,7 +189,7 @@ class Fournisseur extends Societe
 		if (!$user->rights->societe->client->voir && !$user->societe_id) $sql.= ", ".MAIN_DB_PREFIX."societe_commerciaux as sc";
 		$sql.= " WHERE s.fournisseur = 1";
 		$sql.= " AND s.entity IN (".getEntity('societe', 1).")";
-		if (!$user->rights->societe->client->voir && !$user->societe_id) $sql.= " AND s.rowid = sc.fk_soc AND sc.fk_user = " .$user->id;
+		if (!$user->rights->societe->client->voir && !$user->societe_id) $sql.= " AND s.rowid = sc.fk_soc AND sc.fk_user = " .$this->user->id;
 
 		$resql=$this->db->query($sql);
 
@@ -212,3 +212,4 @@ class Fournisseur extends Societe
 
 }
 
+?>

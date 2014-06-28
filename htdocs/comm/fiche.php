@@ -67,18 +67,11 @@ $pagenext = $page + 1;
 if (! $sortorder) $sortorder="ASC";
 if (! $sortfield) $sortfield="nom";
 
-// Initialize technical object to manage hooks of thirdparties. Note that conf->hooks_modules contains array array
-$hookmanager->initHooks(array('commcard'));
-
 $object = new Societe($db);
 
 /*
  * Actions
  */
-
-$parameters = array('socid' => $id);
-$reshook = $hookmanager->executeHooks('doActions', $parameters, $object, $action); // Note that $action and $object may have been modified by some
-
 
 if ($action == 'setcustomeraccountancycode')
 {
@@ -274,11 +267,11 @@ if ($id > 0)
 	// Fax
 	print '<td>'.$langs->trans('Fax').'</td><td style="min-width: 25%;">'.dol_print_phone($object->fax,$object->country_code,0,$object->id,'AC_FAX').'</td></tr>';
 
-	// Skype
-  	if (! empty($conf->skype->enabled))
-  	{
-		print '<td>'.$langs->trans('Skype').'</td><td colspan="3">'.dol_print_skype($object->skype,0,$object->id,'AC_SKYPE').'</td></tr>';
-  	}
+  // Skype
+  if (! empty($conf->skype->enabled))
+  {
+	   print '<td>'.$langs->trans('Skype').'</td><td colspan="3">'.dol_print_skype($object->skype,0,$object->id,'AC_SKYPE').'</td></tr>';
+  }
 
 	// Assujeti a TVA ou pas
 	print '<tr>';
@@ -821,11 +814,6 @@ if ($id > 0)
 	/*
 	 * Barre d'actions
 	 */
-	
-	$parameters = array();
-	$reshook = $hookmanager->executeHooks('addMoreActionsButtons', $parameters, $object, $action); // Note that $action and $object may have been
-	
-	
 	print '<div class="tabsAction">';
 
 	if (! empty($conf->propal->enabled) && $user->rights->propal->creer)

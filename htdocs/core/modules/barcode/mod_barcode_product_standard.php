@@ -33,17 +33,17 @@ require_once DOL_DOCUMENT_ROOT.'/core/modules/barcode/modules_barcode.class.php'
  */
 class mod_barcode_product_standard extends ModeleNumRefBarCode
 {
-	var $nom='Standard';				// Model Name
-	var $code_modifiable;				// Editable code
-	var $code_modifiable_invalide;		// Modified code if it is invalid
-	var $code_modifiable_null;			// Modified code if it is null
-	var $code_null;						// Optional code
+	var $nom='Standard';				// Nom du modele
+	var $code_modifiable;				// Code modifiable
+	var $code_modifiable_invalide;		// Code modifiable si il est invalide
+	var $code_modifiable_null;			// Code modifiables si il est null
+	var $code_null;						// Code facultatif
 	var $version='dolibarr';    		// 'development', 'experimental', 'dolibarr'
-	var $code_auto;                     // Automatic Numbering
+	var $code_auto;                     // Numerotation automatique
 
-	var $searchcode; // Search string
-	var $numbitcounter; // Number of digits the counter
-	var $prefixIsRequired; // The prefix field of third party must be filled when using {pre}
+	var $searchcode; // String de recherche
+	var $numbitcounter; // Nombre de chiffres du compteur
+	var $prefixIsRequired; // Le champ prefix du tiers doit etre renseigne quand on utilise {pre}
 
 
 	/**
@@ -62,7 +62,7 @@ class mod_barcode_product_standard extends ModeleNumRefBarCode
 
 	/**		Return description of module
 	 *
-	 * 		@param	Translate 		$langs		Object langs
+	 * 		@param	string 		$langs		Object langs
 	 * 		@return string      			Description of module
 	 */
 	function info($langs)
@@ -104,7 +104,7 @@ class mod_barcode_product_standard extends ModeleNumRefBarCode
 	 * Return an example of result returned by getNextValue
 	 *
 	 * @param	Translate	$langs			Object langs
-	 * @param	Product		$objproduct		Object product
+	 * @param	product		$objproduct		Object product
 	 * @return	string						Return string example
 	 */
 	function getExample($langs,$objproduct=0)
@@ -161,23 +161,20 @@ class mod_barcode_product_standard extends ModeleNumRefBarCode
 	/**
 	 * 	Check validity of code according to its rules
 	 *
-	 *	@param	DoliDB		$db					Database handler
-	 *	@param	string		&$code				Code to check/correct
-	 *	@param	Product		$product			Object product
-	 *  @param  int		  	$thirdparty_type   	0 = customer/prospect , 1 = supplier
-	 *  @param	string		$type       	    type of barcode (EAN, ISBN, ...)
-	 *  @return int								0 if OK
-	 * 											-1 ErrorBadCustomerCodeSyntax
-	 * 											-2 ErrorCustomerCodeRequired
-	 * 											-3 ErrorCustomerCodeAlreadyUsed
-	 * 											-4 ErrorPrefixRequired
+	 *	@param	DoliDB		$db			Database handler
+	 *	@param	string		&$code		Code to check/correct
+	 *	@param	Product		$product	Object product
+	 *  @param  int		  	$type   	0 = customer/prospect , 1 = supplier
+	 *  @return int						0 if OK
+	 * 									-1 ErrorBadCustomerCodeSyntax
+	 * 									-2 ErrorCustomerCodeRequired
+	 * 									-3 ErrorCustomerCodeAlreadyUsed
+	 * 									-4 ErrorPrefixRequired
 	 */
-	function verif($db, &$code, $product, $thirdparty_type, $type)
+	function verif($db, &$code, $product, $type)
 	{
 		global $conf;
 
-		//var_dump($code.' '.$product->ref.' '.$thirdparty_type);exit;
-		
 		require_once DOL_DOCUMENT_ROOT .'/core/lib/functions2.lib.php';
 
 		$result=0;
@@ -193,7 +190,7 @@ class mod_barcode_product_standard extends ModeleNumRefBarCode
 		}
 		else
 		{
-			if ($this->verif_syntax($code, $type) >= 0)
+			if ($this->verif_syntax($code) >= 0)
 			{
 				$is_dispo = $this->verif_dispo($db, $code, $product);
 				if ($is_dispo <> 0)
@@ -218,7 +215,7 @@ class mod_barcode_product_standard extends ModeleNumRefBarCode
 			}
 		}
 
-		dol_syslog(get_class($this)."::verif type=".$thirdparty_type." result=".$result);
+		dol_syslog(get_class($this)."::verif type=".$type." result=".$result);
 		return $result;
 	}
 
@@ -257,13 +254,12 @@ class mod_barcode_product_standard extends ModeleNumRefBarCode
 	}
 
 	/**
-	 *	Return if a barcode value match syntax
+	 *	Renvoi si un code respecte la syntaxe
 	 *
-	 *	@param	string	$codefortest	Code to check syntax
-     *  @param	string	$typefortest	Type of barcode (ISBN, EAN, ...)
+	 *	@param	string		$code		Code a verifier
 	 *	@return	int						0 if OK, <0 if KO
 	 */
-	function verif_syntax($codefortest, $typefortest)
+	function verif_syntax($code)
 	{
 		global $conf;
 
@@ -277,16 +273,11 @@ class mod_barcode_product_standard extends ModeleNumRefBarCode
 			return '';
 		}
 
-		$newcodefortest=$codefortest;
-		if (in_array($typefortest,array('EAN13','ISBN')))	// We remove the CRC char not included into mask
-		{
-			$newcodefortest=substr($newcodefortest,0,12);
-		}
-	
-		$result=check_value($mask,$newcodefortest);
+		$result=check_value($mask,$code);
 
 		return $result;
 	}
 
 }
 
+?>

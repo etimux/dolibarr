@@ -28,7 +28,7 @@ $langs->load("admin");
 $langs->load("members");
 $langs->load("errors");
 
-// Choice of print year or current year.
+// Choix de l'annee d'impression ou annee courante.
 $now = dol_now();
 $year=dol_print_date($now,'%Y');
 $month=dol_print_date($now,'%m');
@@ -245,13 +245,6 @@ if ($conf->societe->enabled)
 // For products
 if ($conf->product->enabled || $conf->product->service)
 {
-	// Example 1 : Adding jquery code
-	print '<script type="text/javascript" language="javascript">
-	function confirm_erase() {
-		return confirm("'.dol_escape_js($langs->trans("ConfirmEraseAllCurrentBarCode")).'");
-	}
-	</script>';
-
 	$nbno=$nbtotal=0;
 
 	print_fiche_titre($langs->trans("BarcodeInitForProductsOrServices"),'','').'<br>'."\n";
@@ -303,6 +296,8 @@ if ($conf->product->enabled || $conf->product->service)
 	if (empty($nbno))
 	{
 		$disabled1=1;
+		$titleno=$langs->trans("NoRecordWithoutBarcodeDefined");
+		print '<font class="ok">'.$langs->trans("NoRecordWithoutBarcodeDefined").'</font><br>';
 	}
 
 	print '<br>';
@@ -311,7 +306,7 @@ if ($conf->product->enabled || $conf->product->service)
 	print '<input class="button" type="submit" name="submitformbarcodeproductgen" id="submitformbarcodeproductgen" value="'.$langs->trans("InitEmptyBarCode",min($maxperinit,$nbno)).'"'.$moretags1.'>';
 	$moretags2=(($nbno == $nbtotal)?' disabled="disabled"':'');
 	print ' &nbsp; ';
-	print '<input class="button" type="submit" name="eraseallbarcode" id="eraseallbarcode" value="'.$langs->trans("EraseAllCurrentBarCode").'"'.$moretags2.' onClick="return confirm_erase();">';
+	print '<input class="button" type="submit" name="eraseallbarcode" id="eraseallbarcode" value="'.$langs->trans("EraseAllCurrentBarCode").'"'.$moretags2.'>';
 	print '<br><br><br>';
 }
 
@@ -322,3 +317,4 @@ print '<br>';
 llxFooter();
 
 $db->close();
+?>

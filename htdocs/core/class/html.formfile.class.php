@@ -257,10 +257,8 @@ class FormFile
      */
     function showdocuments($modulepart,$modulesubdir,$filedir,$urlsource,$genallowed,$delallowed=0,$modelselected='',$allowgenifempty=1,$forcenomultilang=0,$iconPDF=0,$maxfilenamelength=28,$noform=0,$param='',$title='',$buttonlabel='',$codelang='',$morepicto='')
     {
-        global $langs, $conf, $user, $hookmanager;
-        global $form, $bc;
-
-        if (! is_object($form)) $form=new Form($this->db);
+        global $langs,$conf,$user,$hookmanager;
+        global $bc;
 
         // filedir = $conf->...->dir_ouput."/".get_exdir(id)
         include_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
@@ -449,6 +447,7 @@ class FormFile
 
             $headershown=1;
 
+            $form = new Form($this->db);
             $buttonlabeltoshow=$buttonlabel;
             if (empty($buttonlabel)) $buttonlabel=$langs->trans('Generate');
 
@@ -483,7 +482,7 @@ class FormFile
 
             // Language code (if multilang)
             $out.= '<th align="center" class="formdoc liste_titre">';
-            if (($allowgenifempty || (is_array($modellist) && count($modellist) > 0)) && $conf->global->MAIN_MULTILANGS && ! $forcenomultilang)
+            if (($allowgenifempty || (is_array($modellist) && count($modellist) > 0)) && $conf->global->MAIN_MULTILANGS && ! $forcenomultilang && (! empty($modellist) || $showempty))
             {
                 include_once DOL_DOCUMENT_ROOT.'/core/class/html.formadmin.class.php';
                 $formadmin=new FormAdmin($this->db);
@@ -509,6 +508,7 @@ class FormFile
                	$genbutton.= ' '.img_warning($langs->transnoentitiesnoconv("WarningNoDocumentModelActivated"));
             }
             if (! $allowgenifempty && ! is_array($modellist) && empty($modellist) && empty($conf->dol_no_mouse_hover) && $modulepart != 'unpaid') $genbutton='';
+            if (empty($modellist) && ! $showempty) $genbutton='';
             $out.= $genbutton;
             $out.= '</th>';
 
@@ -529,7 +529,7 @@ class FormFile
         // Get list of files
         if (! empty($filedir))
         {
-            $file_list=dol_dir_list($filedir,'files',0,'','(\.meta|_preview\.png)$','date',SORT_DESC);
+            $file_list=dol_dir_list($filedir,'files',0,'','\.meta$','date',SORT_DESC);
 
             // Affiche en-tete tableau si non deja affiche
             if (! empty($file_list) && ! $headershown)
@@ -802,8 +802,7 @@ class FormFile
 					{
 						print '<td align="center">';
 						$tmp=explode('.',$file['name']);
-						if (count($tmp) == 3) $minifile=$tmp[0].'_mini.'.$tmp[1].'.'.strtolower($tmp[2]);	// Thumbs are created with filename in lower case
-						else $minifile=$tmp[0].'_mini.'.strtolower($tmp[1]);	// Thumbs are created with filename in lower case
+						$minifile=$tmp[0].'_mini.'.strtolower($tmp[1]);	// Thumbs are created with filename in lower case
 						if (image_format_supported($file['name']) > 0) print '<img border="0" height="'.$maxheightmini.'" src="'.DOL_URL_ROOT.'/viewimage.php?modulepart='.$modulepart.'&file='.urlencode($relativepath.'thumbs/'.$minifile).'" title="">';
 						else print '&nbsp;';
 						print '</td>';
@@ -1188,3 +1187,4 @@ class FormFile
 
 }
 
+?>
