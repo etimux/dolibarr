@@ -5,7 +5,7 @@
  * Copyright (C) 2006      Andre Cianfarani            <acianfa@free.fr>
  * Copyright (C) 2005-2012 Regis Houssin               <regis.houssin@capnetworks.com>
  * Copyright (C) 2008      Raphael Bertrand (Resultic) <raphael.bertrand@resultic.fr>
- * Copyright (C) 2010-2013 Juanjo Menent               <jmenent@2byte.es>
+ * Copyright (C) 2010-2014 Juanjo Menent               <jmenent@2byte.es>
  * Copyright (C) 2013      Alexandre Spangaro          <alexandre.spangaro@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -67,11 +67,18 @@ $pagenext = $page + 1;
 if (! $sortorder) $sortorder="ASC";
 if (! $sortfield) $sortfield="nom";
 
+// Initialize technical object to manage hooks of thirdparties. Note that conf->hooks_modules contains array array
+$hookmanager->initHooks(array('commcard'));
+
 $object = new Societe($db);
 
 /*
  * Actions
  */
+
+$parameters = array('socid' => $id);
+$reshook = $hookmanager->executeHooks('doActions', $parameters, $object, $action); // Note that $action and $object may have been modified by some
+
 
 if ($action == 'setcustomeraccountancycode')
 {
@@ -267,11 +274,11 @@ if ($id > 0)
 	// Fax
 	print '<td>'.$langs->trans('Fax').'</td><td style="min-width: 25%;">'.dol_print_phone($object->fax,$object->country_code,0,$object->id,'AC_FAX').'</td></tr>';
 
-  // Skype
-  if (! empty($conf->skype->enabled))
-  {
-	   print '<td>'.$langs->trans('Skype').'</td><td colspan="3">'.dol_print_skype($object->skype,0,$object->id,'AC_SKYPE').'</td></tr>';
-  }
+	// Skype
+  	if (! empty($conf->skype->enabled))
+  	{
+		print '<td>'.$langs->trans('Skype').'</td><td colspan="3">'.dol_print_skype($object->skype,0,$object->id,'AC_SKYPE').'</td></tr>';
+  	}
 
 	// Assujeti a TVA ou pas
 	print '<tr>';
@@ -281,30 +288,28 @@ if ($id > 0)
 	print '</tr>';
 
 	// Local Taxes
-	if($mysoc->country_code=='ES')
+	if($mysoc->localtax1_assuj=="1" && $mysoc->localtax2_assuj=="1")
 	{
-		if($mysoc->localtax1_assuj=="1" && $mysoc->localtax2_assuj=="1")
-		{
-			print '<tr><td class="nowrap">'.$langs->trans('LocalTax1IsUsedES').'</td><td colspan="3">';
-			print yn($object->localtax1_assuj);
-			print '</td></tr>';
-			print '<tr><td class="nowrap">'.$langs->trans('LocalTax2IsUsedES').'</td><td colspan="3">';
-			print yn($object->localtax2_assuj);
-			print '</td></tr>';
-		}
-		elseif($mysoc->localtax1_assuj=="1")
-		{
-			print '<tr><td>'.$langs->trans("LocalTax1IsUsedES").'</td><td colspan="3">';
-			print yn($object->localtax1_assuj);
-			print '</td></tr>';
-		}
-		elseif($mysoc->localtax2_assuj=="1")
-		{
-			print '<tr><td>'.$langs->trans("LocalTax2IsUsedES").'</td><td colspan="3">';
-			print yn($object->localtax2_assuj);
-			print '</td></tr>';
-		}
+		print '<tr><td class="nowrap">'.$langs->trans('LocalTax1IsUsedES').'</td><td colspan="3">';
+		print yn($object->localtax1_assuj);
+		print '</td></tr>';
+		print '<tr><td class="nowrap">'.$langs->trans('LocalTax2IsUsedES').'</td><td colspan="3">';
+		print yn($object->localtax2_assuj);
+		print '</td></tr>';
 	}
+	elseif($mysoc->localtax1_assuj=="1")
+	{
+		print '<tr><td>'.$langs->trans("LocalTax1IsUsedES").'</td><td colspan="3">';
+		print yn($object->localtax1_assuj);
+		print '</td></tr>';
+	}
+	elseif($mysoc->localtax2_assuj=="1")
+	{
+		print '<tr><td>'.$langs->trans("LocalTax2IsUsedES").'</td><td colspan="3">';
+		print yn($object->localtax2_assuj);
+		print '</td></tr>';
+	}
+
 
 	// TVA Intra
 	print '<tr><td class="nowrap">'.$langs->trans('VATIntra').'</td><td colspan="3">';
@@ -814,6 +819,11 @@ if ($id > 0)
 	/*
 	 * Barre d'actions
 	 */
+
+	$parameters = array();
+	$reshook = $hookmanager->executeHooks('addMoreActionsButtons', $parameters, $object, $action); // Note that $action and $object may have been
+
+
 	print '<div class="tabsAction">';
 
 	if (! empty($conf->propal->enabled) && $user->rights->propal->creer)
@@ -920,5 +930,5 @@ dol_htmloutput_mesg('',$mesgs);
 
 // End of page
 llxFooter();
+
 $db->close();
-?>

@@ -3,7 +3,7 @@
  * Copyright (C) 2004-2012 Laurent Destailleur  <eldy@users.sourceforge.net>
  * Copyright (C) 2005-2013 Regis Houssin        <regis.houssin@capnetworks.com>
  * Copyright (C) 2006      Andre Cianfarani     <acianfa@free.fr>
- * Copyright (C) 2010-2013 Juanjo Menent        <jmenent@2byte.es>
+ * Copyright (C) 2010-2014 Juanjo Menent        <jmenent@2byte.es>
  * Copyright (C) 2011      Jean Heimburger      <jean@tiaris.info>
  * Copyright (C) 2012      Christophe Battarel  <christophe.battarel@altairis.fr>
  * Copyright (C) 2013      Florian Henry		<florian.henry@open-concept.pro>
@@ -60,6 +60,7 @@ class Commande extends CommonOrder
     var $brouillon;
     var $cond_reglement_id;
     var $cond_reglement_code;
+    var $fk_account;
     var $mode_reglement_id;
     var $mode_reglement_code;
     var $availability_id;
@@ -232,12 +233,12 @@ class Commande extends CommonOrder
         $sql.= " fk_user_valid = ".$user->id;
         $sql.= " WHERE rowid = ".$this->id;
 
-        dol_syslog(get_class($this)."::valid() sql=".$sql);
+        dol_syslog(get_class($this)."::valid()", LOG_DEBUG);
         $resql=$this->db->query($sql);
         if (! $resql)
         {
-            dol_syslog(get_class($this)."::valid Echec update - 10 - sql=".$sql, LOG_ERR);
             dol_print_error($this->db);
+            $this->error=$this->db->lasterror();
             $error++;
         }
 
@@ -258,8 +259,13 @@ class Commande extends CommonOrder
                         $mouvP = new MouvementStock($this->db);
                         // We decrement stock of product (and sub-products)
                         $result=$mouvP->livraison($user, $this->lines[$i]->fk_product, $idwarehouse, $this->lines[$i]->qty, $this->lines[$i]->subprice, $langs->trans("OrderValidatedInDolibarr",$num));
-                        if ($result < 0) { $error++; }
+                        if ($result < 0)
+                        { 
+                        	$error++;
+                        	$this->error=$mouvP->error;
+                        }
                     }
+                    if ($error) break;
                 }
             }
         }
@@ -295,12 +301,10 @@ class Commande extends CommonOrder
 
         if (! $error)
         {
-            // Appel des triggers
-            include_once DOL_DOCUMENT_ROOT . '/core/class/interfaces.class.php';
-            $interface=new Interfaces($this->db);
-            $result=$interface->run_triggers('ORDER_VALIDATE',$this,$user,$langs,$conf);
-            if ($result < 0) { $error++; $this->errors=$interface->errors; }
-            // Fin appel triggers
+            // Call trigger
+            $result=$this->call_trigger('ORDER_VALIDATE',$user);
+            if ($result < 0) $error++;            
+            // End call triggers
         }
 
         // Set new ref and current status
@@ -318,7 +322,6 @@ class Commande extends CommonOrder
         else
         {
             $this->db->rollback();
-            $this->error=$this->db->lasterror();
             return -1;
         }
     }
@@ -354,7 +357,7 @@ class Commande extends CommonOrder
         $sql.= " SET fk_statut = 0";
         $sql.= " WHERE rowid = ".$this->id;
 
-        dol_syslog(get_class($this)."::set_draft sql=".$sql, LOG_DEBUG);
+        dol_syslog(get_class($this)."::set_draft", LOG_DEBUG);
         if ($this->db->query($sql))
         {
             // If stock is decremented on validate order, we must reincrement it
@@ -397,7 +400,6 @@ class Commande extends CommonOrder
         {
             $this->error=$this->db->error();
             $this->db->rollback();
-            dol_syslog($this->error, LOG_ERR);
             return -1;
         }
     }
@@ -426,16 +428,14 @@ class Commande extends CommonOrder
         $sql.= ' SET fk_statut=1, facture=0';
         $sql.= ' WHERE rowid = '.$this->id;
 
-        dol_syslog(get_class($this)."::set_reopen sql=".$sql);
+        dol_syslog(get_class($this)."::set_reopen", LOG_DEBUG);
         $resql = $this->db->query($sql);
         if ($resql)
         {
-            // Appel des triggers
-            include_once DOL_DOCUMENT_ROOT . '/core/class/interfaces.class.php';
-            $interface=new Interfaces($this->db);
-            $result=$interface->run_triggers('ORDER_REOPEN',$this,$user,$langs,$conf);
-            if ($result < 0) { $error++; $this->errors=$interface->errors; }
-            // Fin appel triggers
+            // Call trigger
+            $result=$this->call_trigger('ORDER_REOPEN',$user);
+            if ($result < 0) $error++;            
+            // End call triggers
         }
         else
         {
@@ -491,13 +491,11 @@ class Commande extends CommonOrder
 
             if ($this->db->query($sql))
             {
-                // Appel des triggers
-                include_once DOL_DOCUMENT_ROOT . '/core/class/interfaces.class.php';
-                $interface=new Interfaces($this->db);
-                $result=$interface->run_triggers('ORDER_CLOSE',$this,$user,$langs,$conf);
-                if ($result < 0) { $error++; $this->errors=$interface->errors; }
-                // Fin appel triggers
-
+	            // Call trigger
+	            $result=$this->call_trigger('ORDER_CLOSE',$user);
+	            if ($result < 0) $error++;            
+	            // End call triggers
+ 
                 if (! $error)
                 {
                 	$this->statut=3;
@@ -514,7 +512,6 @@ class Commande extends CommonOrder
             else
             {
                 $this->error=$this->db->lasterror();
-                dol_syslog($this->error, LOG_ERR);
 
                 $this->db->rollback();
                 return -1;
@@ -542,7 +539,7 @@ class Commande extends CommonOrder
 		$sql.= " WHERE rowid = ".$this->id;
 		$sql.= " AND fk_statut = 1";
 
-		dol_syslog(get_class($this)."::cancel sql=".$sql, LOG_DEBUG);
+		dol_syslog(get_class($this)."::cancel", LOG_DEBUG);
 		if ($this->db->query($sql))
 		{
 			// If stock is decremented on validate order, we must reincrement it
@@ -559,8 +556,11 @@ class Commande extends CommonOrder
 						$mouvP = new MouvementStock($this->db);
 						// We increment stock of product (and sub-products)
 						$result=$mouvP->reception($user, $this->lines[$i]->fk_product, $idwarehouse, $this->lines[$i]->qty, $this->lines[$i]->subprice, $langs->trans("OrderCanceledInDolibarr",$this->ref));
-						if ($result < 0) {
+						if ($result < 0) 
+						{
 							$error++;
+							$this->error=$mouvP->error;
+							break;
 						}
 					}
 				}
@@ -568,14 +568,10 @@ class Commande extends CommonOrder
 
 			if (! $error)
 			{
-				// Appel des triggers
-				include_once DOL_DOCUMENT_ROOT . '/core/class/interfaces.class.php';
-				$interface=new Interfaces($this->db);
-				$result=$interface->run_triggers('ORDER_CANCEL',$this,$user,$langs,$conf);
-				if ($result < 0) {
-					$error++; $this->errors=$interface->errors;
-				}
-				// Fin appel triggers
+	            // Call trigger
+	            $result=$this->call_trigger('ORDER_CANCEL',$user);
+	            if ($result < 0) $error++;            
+	            // End call triggers
 			}
 
 			if (! $error)
@@ -586,8 +582,6 @@ class Commande extends CommonOrder
 			}
 			else
 			{
-				$this->error=$mouvP->error;
-
 				foreach($this->errors as $errmsg)
 				{
 					dol_syslog(get_class($this)."::cancel ".$errmsg, LOG_ERR);
@@ -601,7 +595,6 @@ class Commande extends CommonOrder
 		{
 			$this->error=$this->db->error();
 			$this->db->rollback();
-			dol_syslog($this->error, LOG_ERR);
 			return -1;
 		}
 	}
@@ -649,7 +642,7 @@ class Commande extends CommonOrder
 
         $sql = "INSERT INTO ".MAIN_DB_PREFIX."commande (";
         $sql.= " ref, fk_soc, date_creation, fk_user_author, fk_projet, date_commande, source, note_private, note_public, ref_client, ref_int";
-        $sql.= ", model_pdf, fk_cond_reglement, fk_mode_reglement, fk_availability, fk_input_reason, date_livraison, fk_delivery_address";
+        $sql.= ", model_pdf, fk_cond_reglement, fk_mode_reglement, fk_account, fk_availability, fk_input_reason, date_livraison, fk_delivery_address";
         $sql.= ", remise_absolue, remise_percent";
         $sql.= ", entity";
         $sql.= ")";
@@ -664,6 +657,7 @@ class Commande extends CommonOrder
         $sql.= ", '".$this->modelpdf."'";
         $sql.= ", ".($this->cond_reglement_id>0?"'".$this->cond_reglement_id."'":"null");
         $sql.= ", ".($this->mode_reglement_id>0?"'".$this->mode_reglement_id."'":"null");
+        $sql.= ", ".($this->fk_account>0?$this->fk_account:'NULL');
         $sql.= ", ".($this->availability_id>0?"'".$this->availability_id."'":"null");
         $sql.= ", ".($this->demand_reason_id>0?"'".$this->demand_reason_id."'":"null");
         $sql.= ", ".($this->date_livraison?"'".$this->db->idate($this->date_livraison)."'":"null");
@@ -673,7 +667,7 @@ class Commande extends CommonOrder
         $sql.= ", ".$conf->entity;
         $sql.= ")";
 
-        dol_syslog(get_class($this)."::create sql=".$sql);
+        dol_syslog(get_class($this)."::create", LOG_DEBUG);
         $resql=$this->db->query($sql);
         if ($resql)
         {
@@ -801,12 +795,10 @@ class Commande extends CommonOrder
 
                     if (! $notrigger)
                     {
-                        // Appel des triggers
-                        include_once DOL_DOCUMENT_ROOT . '/core/class/interfaces.class.php';
-                        $interface=new Interfaces($this->db);
-                        $result=$interface->run_triggers('ORDER_CREATE',$this,$user,$langs,$conf);
-                        if ($result < 0) { $error++; $this->errors=$interface->errors; }
-                        // Fin appel triggers
+			            // Call trigger
+			            $result=$this->call_trigger('ORDER_CREATE',$user);
+			            if ($result < 0) $error++;            
+			            // End call triggers
                     }
 
 	                if (!$error) {
@@ -898,12 +890,10 @@ class Commande extends CommonOrder
                 if ($reshook < 0) $error++;
             }
 
-            // Appel des triggers
-            include_once DOL_DOCUMENT_ROOT . '/core/class/interfaces.class.php';
-            $interface=new Interfaces($this->db);
-            $result=$interface->run_triggers('ORDER_CLONE',$this,$user,$langs,$conf);
-            if ($result < 0) { $error++; $this->errors=$interface->errors; }
-            // Fin appel triggers
+            // Call trigger
+            $result=$this->call_trigger('ORDER_CLONE',$user);
+            if ($result < 0) $error++;            
+            // End call triggers
         }
 
         // End
@@ -977,6 +967,7 @@ class Commande extends CommonOrder
             $this->fk_project           = $object->fk_project;
             $this->cond_reglement_id    = $object->cond_reglement_id;
             $this->mode_reglement_id    = $object->mode_reglement_id;
+            $this->fk_account           = $object->fk_account;
             $this->availability_id      = $object->availability_id;
             $this->demand_reason_id     = $object->demand_reason_id;
             $this->date_livraison       = $object->date_livraison;
@@ -1111,7 +1102,7 @@ class Commande extends CommonOrder
             // TRES IMPORTANT: C'est au moment de l'insertion ligne qu'on doit stocker
             // la part ht, tva et ttc, et ce au niveau de la ligne qui a son propre taux tva.
 
-            $localtaxes_type=getLocalTaxesFromRate($txtva,0,$mysoc);
+            $localtaxes_type=getLocalTaxesFromRate($txtva,0,$this->thirdparty,$mysoc);
 
             $tabprice = calcul_price_total($qty, $pu, $remise_percent, $txtva, $txlocaltax1, $txlocaltax2, 0, $price_base_type, $info_bits, $type,'', $localtaxes_type);
             $total_ht  = $tabprice[0];
@@ -1308,6 +1299,7 @@ class Commande extends CommonOrder
 
         $sql = 'SELECT c.rowid, c.date_creation, c.ref, c.fk_soc, c.fk_user_author, c.fk_statut';
         $sql.= ', c.amount_ht, c.total_ht, c.total_ttc, c.tva as total_tva, c.localtax1 as total_localtax1, c.localtax2 as total_localtax2, c.fk_cond_reglement, c.fk_mode_reglement, c.fk_availability, c.fk_input_reason';
+        $sql.= ', c.fk_account';
         $sql.= ', c.date_commande';
         $sql.= ', c.date_livraison';
         $sql.= ', c.fk_projet, c.remise_percent, c.remise, c.remise_absolue, c.source, c.facture as billed';
@@ -1327,7 +1319,7 @@ class Commande extends CommonOrder
         if ($ref_ext) $sql.= " AND c.ref_ext='".$this->db->escape($ref_ext)."'";
         if ($ref_int) $sql.= " AND c.ref_int='".$this->db->escape($ref_int)."'";
 
-        dol_syslog(get_class($this)."::fetch sql=".$sql, LOG_DEBUG);
+        dol_syslog(get_class($this)."::fetch", LOG_DEBUG);
         $result = $this->db->query($sql);
         if ($result)
         {
@@ -1367,6 +1359,7 @@ class Commande extends CommonOrder
                 $this->cond_reglement_code	= $obj->cond_reglement_code;
                 $this->cond_reglement		= $obj->cond_reglement_libelle;
                 $this->cond_reglement_doc	= $obj->cond_reglement_libelle_doc;
+                $this->fk_account           = $obj->fk_account;
                 $this->availability_id		= $obj->fk_availability;
                 $this->availability_code	= $obj->availability_code;
                 $this->demand_reason_id		= $obj->fk_input_reason;
@@ -1402,13 +1395,11 @@ class Commande extends CommonOrder
             else
             {
                 $this->error='Order with id '.$id.' not found sql='.$sql;
-                dol_syslog(get_class($this).'::fetch '.$this->error);
                 return 0;
             }
         }
         else
         {
-            dol_syslog(get_class($this).'::fetch Error rowid='.$id, LOG_ERR);
             $this->error=$this->db->error();
             return -1;
         }
@@ -1511,7 +1502,7 @@ class Commande extends CommonOrder
         if ($only_product) $sql .= ' AND p.fk_product_type = 0';
         $sql .= ' ORDER BY l.rang';
 
-        dol_syslog(get_class($this)."::fetch_lines sql=".$sql,LOG_DEBUG);
+        dol_syslog(get_class($this)."::fetch_lines", LOG_DEBUG);
         $result = $this->db->query($sql);
         if ($result)
         {
@@ -1576,7 +1567,6 @@ class Commande extends CommonOrder
         else
         {
             $this->error=$this->db->error();
-            dol_syslog('Commande::fetch_lines: Error '.$this->error, LOG_ERR);
             return -3;
         }
     }
@@ -1638,7 +1628,7 @@ class Commande extends CommonOrder
         $sql.= ' GROUP BY cd.rowid, cd.fk_product';
         //print $sql;
 
-        dol_syslog(get_class($this)."::loadExpeditions sql=".$sql,LOG_DEBUG);
+        dol_syslog(get_class($this)."::loadExpeditions", LOG_DEBUG);
         $result = $this->db->query($sql);
         if ($result)
         {
@@ -1656,7 +1646,6 @@ class Commande extends CommonOrder
         else
         {
             $this->error=$this->db->lasterror();
-            dol_syslog(get_class($this)."::loadExpeditions ".$this->error,LOG_ERR);
             return -1;
         }
 
@@ -1871,7 +1860,7 @@ class Commande extends CommonOrder
             $sql.= ' SET remise_absolue = '.$remise;
             $sql.= ' WHERE rowid = '.$this->id.' AND fk_statut = 0 ;';
 
-            dol_syslog(get_class($this)."::set_remise_absolue sql=$sql");
+            dol_syslog(get_class($this)."::set_remise_absolue", LOG_DEBUG);
 
             if ($this->db->query($sql))
             {
@@ -1903,7 +1892,7 @@ class Commande extends CommonOrder
             $sql.= " SET date_commande = ".($date ? $this->db->idate($date) : 'null');
             $sql.= " WHERE rowid = ".$this->id." AND fk_statut = 0";
 
-            dol_syslog(get_class($this)."::set_date sql=$sql",LOG_DEBUG);
+            dol_syslog(get_class($this)."::set_date",LOG_DEBUG);
             $resql=$this->db->query($sql);
             if ($resql)
             {
@@ -1913,7 +1902,6 @@ class Commande extends CommonOrder
             else
             {
                 $this->error=$this->db->error();
-                dol_syslog(get_class($this)."::set_date ".$this->error,LOG_ERR);
                 return -1;
             }
         }
@@ -1938,7 +1926,7 @@ class Commande extends CommonOrder
             $sql.= " SET date_livraison = ".($date_livraison ? "'".$this->db->idate($date_livraison)."'" : 'null');
             $sql.= " WHERE rowid = ".$this->id;
 
-            dol_syslog(get_class($this)."::set_date_livraison sql=".$sql,LOG_DEBUG);
+            dol_syslog(get_class($this)."::set_date_livraison", LOG_DEBUG);
             $resql=$this->db->query($sql);
             if ($resql)
             {
@@ -1948,7 +1936,6 @@ class Commande extends CommonOrder
             else
             {
                 $this->error=$this->db->error();
-                dol_syslog(get_class($this)."::set_date_livraison ".$this->error,LOG_ERR);
                 return -1;
             }
         }
@@ -2182,7 +2169,6 @@ class Commande extends CommonOrder
             else
             {
                 $this->error=$this->db->lasterror();
-                dol_syslog(get_class($this).'::set_ref_client Erreur '.$this->error.' - '.$sql, LOG_ERR);
                 return -2;
             }
         }
@@ -2206,17 +2192,13 @@ class Commande extends CommonOrder
 		$sql = 'UPDATE '.MAIN_DB_PREFIX.'commande SET facture = 1';
 		$sql.= ' WHERE rowid = '.$this->id.' AND fk_statut > 0';
 
-		dol_syslog(get_class($this)."::classifyBilled sql=".$sql, LOG_DEBUG);
+		dol_syslog(get_class($this)."::classifyBilled", LOG_DEBUG);
 		if ($this->db->query($sql))
 		{
-			// Appel des triggers
-			include_once DOL_DOCUMENT_ROOT . '/core/class/interfaces.class.php';
-			$interface=new Interfaces($this->db);
-			$result=$interface->run_triggers('ORDER_CLASSIFY_BILLED',$this,$user,$langs,$conf);
-			if ($result < 0) {
-				$error++; $this->errors=$interface->errors;
-			}
-			// Fin appel triggers
+            // Call trigger
+            $result=$this->call_trigger('ORDER_CLASSIFY_BILLED',$user);
+            if ($result < 0) $error++;            
+            // End call triggers
 
 			if (! $error)
 			{
@@ -2228,8 +2210,6 @@ class Commande extends CommonOrder
 			}
 			else
 			{
-				$this->error=$this->db->error();
-
 				foreach($this->errors as $errmsg)
 				{
 					dol_syslog(get_class($this)."::classifyBilled ".$errmsg, LOG_ERR);
@@ -2242,7 +2222,6 @@ class Commande extends CommonOrder
 		else
 		{
 			$this->error=$this->db->error();
-            dol_syslog(get_class($this)."::classifyBilled Error ".$this->error, LOG_ERR);
             $this->db->rollback();
 			return -1;
 		}
@@ -2318,7 +2297,7 @@ class Commande extends CommonOrder
             // TRES IMPORTANT: C'est au moment de l'insertion ligne qu'on doit stocker
             // la part ht, tva et ttc, et ce au niveau de la ligne qui a son propre taux tva.
 
-            $localtaxes_type=getLocalTaxesFromRate($txtva,0,$mysoc);
+            $localtaxes_type=getLocalTaxesFromRate($txtva,0,$this->thirdparty, $mysoc);
 
             $tabprice=calcul_price_total($qty, $pu, $remise_percent, $txtva, $txlocaltax1, $txlocaltax2, 0, $price_base_type, $info_bits, $type, '', $localtaxes_type);
             $total_ht  = $tabprice[0];
@@ -2435,34 +2414,31 @@ class Commande extends CommonOrder
 
         if (! $error && ! $notrigger)
         {
-        	// Appel des triggers
-        	include_once DOL_DOCUMENT_ROOT . '/core/class/interfaces.class.php';
-        	$interface=new Interfaces($this->db);
-        	$result=$interface->run_triggers('ORDER_DELETE',$this,$user,$langs,$conf);
-        	if ($result < 0) {
-        		$error++; $this->errors=$interface->errors;
-        	}
-        	// Fin appel triggers
+            // Call trigger
+            $result=$this->call_trigger('ORDER_DELETE',$user);
+            if ($result < 0) $error++;            
+            // End call triggers
         }
 
+        //TODO: Check for error after each action. If one failed we rollback, don't waste time to do action if previous fail
         if (! $error)
         {
         	// Delete order details
         	$sql = 'DELETE FROM '.MAIN_DB_PREFIX."commandedet WHERE fk_commande = ".$this->id;
-        	dol_syslog(get_class($this)."::delete sql=".$sql);
+        	dol_syslog(get_class($this)."::delete", LOG_DEBUG);
         	if (! $this->db->query($sql) )
         	{
-        		dol_syslog(get_class($this)."::delete error", LOG_ERR);
         		$error++;
+        		$this->errors[]=$this->db->lasterror();
         	}
 
         	// Delete order
         	$sql = 'DELETE FROM '.MAIN_DB_PREFIX."commande WHERE rowid = ".$this->id;
-        	dol_syslog(get_class($this)."::delete sql=".$sql, LOG_DEBUG);
+        	dol_syslog(get_class($this)."::delete", LOG_DEBUG);
         	if (! $this->db->query($sql) )
         	{
-        		dol_syslog(get_class($this)."::delete error", LOG_ERR);
         		$error++;
+        		$this->errors[]=$this->db->lasterror();
         	}
 
         	// Delete linked object
@@ -2522,7 +2498,6 @@ class Commande extends CommonOrder
         }
         else
         {
-            $this->error=$this->db->lasterror();
 	        foreach($this->errors as $errmsg)
 	        {
 		        dol_syslog(get_class($this)."::delete ".$errmsg, LOG_ERR);
@@ -3000,7 +2975,6 @@ class Commande extends CommonOrder
         else
         {
             $this->error=$this->db->error();
-            dol_syslog("Error sql=$sql, error=".$this->error,LOG_ERR);
             return -1;
         }
     }
@@ -3166,7 +3140,7 @@ class OrderLine extends CommonOrderLine
 
         $sql = 'DELETE FROM '.MAIN_DB_PREFIX."commandedet WHERE rowid='".$this->rowid."';";
 
-        dol_syslog("OrderLine::delete sql=".$sql);
+        dol_syslog("OrderLine::delete", LOG_DEBUG);
         $resql=$this->db->query($sql);
         if ($resql)
         {
@@ -3182,12 +3156,10 @@ class OrderLine extends CommonOrderLine
 				}
 			}
 
-            // Appel des triggers
-            include_once DOL_DOCUMENT_ROOT . '/core/class/interfaces.class.php';
-            $interface=new Interfaces($this->db);
-            $result=$interface->run_triggers('LINEORDER_DELETE',$this,$user,$langs,$conf);
-            if ($result < 0) { $error++; $this->errors=$interface->errors; }
-            // Fin appel triggers
+            // Call trigger
+            $result=$this->call_trigger('LINEORDER_DELETE',$user);
+            if ($result < 0) $error++;            
+            // End call triggers
 
 	        if (!$error) {
 		        $this->db->commit();
@@ -3205,7 +3177,6 @@ class OrderLine extends CommonOrderLine
         else
         {
             $this->error=$this->db->lasterror();
-            dol_syslog("OrderLine::delete ".$this->error, LOG_ERR);
             return -1;
         }
     }
@@ -3290,7 +3261,7 @@ class OrderLine extends CommonOrderLine
         $sql.= " ".(! empty($this->date_end)?"'".$this->db->idate($this->date_end)."'":"null");
         $sql.= ')';
 
-        dol_syslog(get_class($this)."::insert sql=".$sql, LOG_DEBUG);
+        dol_syslog(get_class($this)."::insert", LOG_DEBUG);
         $resql=$this->db->query($sql);
         if ($resql)
         {
@@ -3308,12 +3279,10 @@ class OrderLine extends CommonOrderLine
 
             if (! $notrigger)
             {
-                // Appel des triggers
-                include_once DOL_DOCUMENT_ROOT . '/core/class/interfaces.class.php';
-                $interface=new Interfaces($this->db);
-                $result=$interface->run_triggers('LINEORDER_INSERT',$this,$user,$langs,$conf);
-                if ($result < 0) { $error++; $this->errors=$interface->errors; }
-                // Fin appel triggers
+	            // Call trigger
+	            $result=$this->call_trigger('LINEORDER_INSERT',$user);
+	            if ($result < 0) $error++;            
+	            // End call triggers
             }
 
 	        if (!$error) {
@@ -3332,7 +3301,6 @@ class OrderLine extends CommonOrderLine
         else
         {
             $this->error=$this->db->error();
-            dol_syslog(get_class($this)."::insert Error ".$this->error, LOG_ERR);
             $this->db->rollback();
             return -2;
         }
@@ -3410,7 +3378,7 @@ class OrderLine extends CommonOrderLine
 		if (! empty($this->rang)) $sql.= ", rang=".$this->rang;
 		$sql.= " WHERE rowid = ".$this->rowid;
 
-		dol_syslog(get_class($this)."::update sql=".$sql, LOG_DEBUG);
+		dol_syslog(get_class($this)."::update", LOG_DEBUG);
 		$resql=$this->db->query($sql);
 		if ($resql)
 		{
@@ -3426,12 +3394,10 @@ class OrderLine extends CommonOrderLine
 
 			if (! $notrigger)
 			{
-				// Appel des triggers
-				include_once DOL_DOCUMENT_ROOT . '/core/class/interfaces.class.php';
-				$interface=new Interfaces($this->db);
-				$result = $interface->run_triggers('LINEORDER_UPDATE',$this,$user,$langs,$conf);
-				if ($result < 0) { $error++; $this->errors=$interface->errors; }
-				// Fin appel triggers
+	            // Call trigger
+	            $result=$this->call_trigger('LINEORDER_UPDATE',$user);
+	            if ($result < 0) $error++;            
+	            // End call triggers
 			}
 
 			if (!$error) {
@@ -3450,7 +3416,6 @@ class OrderLine extends CommonOrderLine
 		else
 		{
 			$this->error=$this->db->error();
-			dol_syslog(get_class($this)."::update Error ".$this->error, LOG_ERR);
 			$this->db->rollback();
 			return -2;
 		}
@@ -3478,7 +3443,7 @@ class OrderLine extends CommonOrderLine
         $sql.= ",total_ttc='".price2num($this->total_ttc)."'";
         $sql.= " WHERE rowid = ".$this->rowid;
 
-        dol_syslog("OrderLine::update_total sql=$sql");
+        dol_syslog("OrderLine::update_total", LOG_DEBUG);
 
         $resql=$this->db->query($sql);
         if ($resql)
@@ -3489,7 +3454,6 @@ class OrderLine extends CommonOrderLine
         else
         {
             $this->error=$this->db->error();
-            dol_syslog("OrderLine::update_total Error ".$this->error, LOG_ERR);
             $this->db->rollback();
             return -2;
         }
