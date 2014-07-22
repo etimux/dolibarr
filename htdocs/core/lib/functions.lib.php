@@ -236,16 +236,21 @@ function dol_getprefix()
  *
  * 	@param	string	$relpath	Relative path to file (Ie: mydir/myfile, ../myfile, ...)
  * 	@param	string	$classname	Class name
- *  @return int					false if include fails.
+ *  @return bool
  */
 function dol_include_once($relpath, $classname='')
 {
-	global $conf,$langs,$user,$mysoc;   // Other global var must be retreived with $GLOBALS['var']
+	$fullpath = dol_buildpath($relpath);
+
+	if (!file_exists($fullpath)) {
+		dol_syslog('functions::dol_include_once Tried to load unexisting file: '.$relpath, LOG_ERR);
+		return false;
+	}
 
 	if (! empty($classname) && ! class_exists($classname)) {
-		return @include dol_buildpath($relpath);			// Remove @ to find error into php log file if you have problems
+		return include $fullpath;
 	} else {
-		return @include_once dol_buildpath($relpath);		// Remove @ to find error into php log file if you have problems
+		return include_once $fullpath;
 	}
 }
 
@@ -4048,10 +4053,11 @@ function dolGetFirstLastname($firstname,$lastname,$nameorder=-1)
 
 
 /**
- *	Set event message in dol_events session
+ *	Set event message in dol_events session object. Will be output by calling dol_htmloutput_events.
+ *  Note: Calling dol_htmloutput_events is done into pages by standard llxFooter() function.
  *
  *	@param	mixed	$mesgs			Message string or array
- *  @param  string	$style      	Which style to use ('mesgs', 'warnings', 'errors')
+ *  @param  string	$style      	Which style to use ('mesgs' by default, 'warnings', 'errors')
  *  @return	void
  *  @see	dol_htmloutput_events
  */
@@ -4073,6 +4079,8 @@ function setEventMessage($mesgs, $style='mesgs')
 
 /**
  *	Print formated messages to output (Used to show messages on html output).
+ *  Note: Calling dol_htmloutput_events is done into pages by standard llxFooter() function, so there is
+ *  no need to call it explicitely.
  *
  *  @return	void
  *  @see    dol_htmloutput_mesg

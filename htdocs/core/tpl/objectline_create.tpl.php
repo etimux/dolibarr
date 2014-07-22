@@ -91,10 +91,17 @@ else {
 
 	<?php
 
+	$forceall=1;	// We always force all type for free lines (module product or service means we use predefined product or service)
+	if ($object->element == 'contrat')
+	{
+		if (empty($conf->product->enabled) && empty($conf->service->enabled) && empty($conf->global->CONTRACT_SUPPORT_PRODUCTS)) $forceall=-1;	// With contract, by default, no choice at all, except if CONTRACT_SUPPORT_PRODUCTS is set
+		else $forceall=0;
+	}
+
 	// Free line
 	echo '<span>';
 	// Show radio free line
-	if (! empty($conf->product->enabled) || ! empty($conf->service->enabled))
+	if ($forceall >= 0 && (! empty($conf->product->enabled) || ! empty($conf->service->enabled)))
 	{
 		echo '<input type="radio" name="prod_entry_mode" id="prod_entry_mode_free" value="free"';
 		//echo (GETPOST('prod_entry_mode')=='free' ? ' checked="true"' : ((empty($forceall) && (empty($conf->product->enabled) || empty($conf->service->enabled)))?' checked="true"':'') );
@@ -102,30 +109,25 @@ else {
 		echo '> ';
 	}
 	else echo '<input type="hidden" id="prod_entry_mode_free" name="prod_entry_mode" value="free">';
+
 	// Show type selector
-/*	if (empty($conf->product->enabled) && empty($conf->service->enabled))
+	if ($forceall >= 0)
 	{
-		// If module product and service disabled, by default this is a product except for contracts it is a service
-		print '<input type="hidden" name="type" value="'.((! empty($object->element) && $object->element == 'contrat')?'1':'0').'">';
-	}
-	else {*/
 		echo '<label for="select_type">';
 		echo $langs->trans("FreeLineOfType");
 		echo '</label>';
-		/*
-		if (empty($conf->product->enabled) && empty($conf->service->enabled)) echo $langs->trans("Type");
-		else if (! empty($forceall) || (! empty($conf->product->enabled) && ! empty($conf->service->enabled))) echo $langs->trans("FreeLineOfType");
-		else if (empty($conf->product->enabled) && ! empty($conf->service->enabled)) echo $langs->trans("FreeLineOfType").' '.$langs->trans("Service");
-		else if (! empty($conf->product->enabled) && empty($conf->service->enabled)) echo $langs->trans("FreeLineOfType").' '.$langs->trans("Product");*/
 		echo ' ';
-		echo $form->select_type_of_lines(isset($_POST["type"])?$_POST["type"]:-1,'type',1,1,1);
-//	}
+	}
+
+	echo $form->select_type_of_lines(isset($_POST["type"])?$_POST["type"]:-1,'type',1,1,$forceall);
+
 	echo '</span>';
 
 	// Predefined product/service
 	if (! empty($conf->product->enabled) || ! empty($conf->service->enabled))
 	{
-		echo '<br><span>';
+		if ($forceall >= 0) echo '<br>';
+		echo '<span>';
 		echo '<input type="radio" name="prod_entry_mode" id="prod_entry_mode_predef" value="predef"'.(GETPOST('prod_entry_mode')=='predef'?' checked="true"':'').'> ';
 
 		echo '<label for="prod_entry_mode_predef">';
@@ -250,7 +252,7 @@ else {
 		<input type="submit" class="button" value="<?php echo $langs->trans('Add'); ?>" name="addline" id="addline">
 	</td>
 	<?php
-	// Line extrafield
+	// Lines for extrafield
 	if (!empty($extrafieldsline)) {
 		if ($this->table_element_line=='commandedet') {
 			$newline = new OrderLine($this->db);
@@ -265,7 +267,7 @@ else {
 			print $newline->showOptionals($extrafieldsline, 'edit', array('style'=>$bcnd[$var], 'colspan'=>$coldisplay+8));
 		}
 	}
-		?>
+	?>
 </tr>
 
 <?php
@@ -273,6 +275,8 @@ if (! empty($conf->service->enabled) && $dateSelector)
 {
 	if(! empty($conf->global->MAIN_VIEW_LINE_NUMBER)) $colspan = 10;
 	else $colspan = 9;
+	if (! empty($inputalsopricewithtax)) $colspan++;	// We add 1 if col total ttc
+	if (in_array($object->element,array('propal','facture','invoice','commande','order'))) $colspan++;	// With this, there is a column move button
 
 	if (! empty($usemargins))
 	{

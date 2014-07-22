@@ -5,6 +5,9 @@ English Dolibarr ChangeLog
 
 ***** ChangeLog for 3.7 compared to 3.6.* *****
 For users:
+- New: Enable feature developed for 3.6 we forgot to enabled: Adding prefix
+       on uploaded file names. 
+- New: No more dependency between contract and service module.
 - New: [ task #867 ] Remove ESAEB external module code from core.
 - New: Can create proposal from an intervention.
 - New: Can filter events on a group of users.
@@ -131,6 +134,10 @@ For users:
 - Fix: [ bug #1477 ] Several customer invoice triggers do not show trigger error messages
 - Fix: [ bug #1471 ] Several PHP warnings when intercepting USER_CREATE trigger.
 - Fix: [ bug #1517 ] Packages sizes.
+- Fix: [ bug #1521 ] The second order's page from a provider shows all orders
+
+TODO
+- New: Predefined product and free product use same form.
 
 For translators:
 - Update language files.
