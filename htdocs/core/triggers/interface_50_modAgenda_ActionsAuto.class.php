@@ -1,9 +1,8 @@
 <?php
 /* Copyright (C) 2005-2011 Laurent Destailleur  <eldy@users.sourceforge.net>
  * Copyright (C) 2009-2011 Regis Houssin        <regis.houssin@capnetworks.com>
- * Copyright (C) 2011-2014 Juanjo Menent        <jmenent@2byte.es>
+ * Copyright (C) 2011-2013 Juanjo Menent        <jmenent@2byte.es>
  * Copyright (C) 2013	   Cedric GROSS         <c.gross@kreiz-it.fr>
- * Copyright (C) 2014       Marcos García       <marcosgdf@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,67 +28,123 @@
 /**
  *  Class of triggered functions for agenda module
  */
-class InterfaceActionsAuto extends DolibarrTriggers
+class InterfaceActionsAuto
 {
-	public $family = 'agenda';
-	public $description = "Triggers of this module add actions in agenda according to setup made in agenda setup.";
-	public $version = self::VERSION_DOLIBARR;
-	public $picto = 'action';
+    var $db;
+    var $error;
 
-	/**
-	 * Function called when a Dolibarrr business event is done.
-	 * All functions "runTrigger" are triggered if file is inside directory htdocs/core/triggers or htdocs/module/code/triggers (and declared)
-	 *
-	 * Following properties must be filled:
-	 *      $object->actiontypecode (translation action code: AC_OTH, ...)
-	 *      $object->actionmsg (note, long text)
-	 *      $object->actionmsg2 (label, short text)
-	 *      $object->sendtoid (id of contact)
-	 *      $object->socid
-	 *      Optionnal:
-	 *      $object->fk_element
-	 *      $object->elementtype
-	 *
-	 * @param string		$action		Event action code
-	 * @param Object		$object     Object
-	 * @param User		    $user       Object user
-	 * @param Translate 	$langs      Object langs
-	 * @param conf		    $conf       Object conf
-	 * @return int         				<0 if KO, 0 if no triggered ran, >0 if OK
-	 */
-	public function runTrigger($action, $object, User $user, Translate $langs, Conf $conf)
-	{
-		// Module not active, we do nothing
-        if (empty($conf->agenda->enabled)) {
-	        return 0;
-        }
+    var $date;
+    var $duree;
+    var $texte;
+    var $desc;
 
-		$key = 'MAIN_AGENDA_ACTIONAUTO_'.$action;
+    /**
+     *   Constructor
+     *
+     *   @param		DoliDB		$db      Database handler
+     */
+    function __construct($db)
+    {
+        $this->db = $db;
 
-		// Do not log events not enabled for this action
-		if (empty($conf->global->$key)) {
-			return 0;
-		}
+        $this->name = preg_replace('/^Interface/i','',get_class($this));
+        $this->family = "agenda";
+        $this->description = "Triggers of this module add actions in agenda according to setup made in agenda setup.";
+        $this->version = 'dolibarr';                        // 'experimental' or 'dolibarr' or version
+        $this->picto = 'action';
+    }
 
-		$langs->load("agenda");
+    /**
+     *   Return name of trigger file
+     *
+     *   @return     string      Name of trigger file
+     */
+    function getName()
+    {
+        return $this->name;
+    }
+
+    /**
+     *   Return description of trigger file
+     *
+     *   @return     string      Description of trigger file
+     */
+    function getDesc()
+    {
+        return $this->description;
+    }
+
+    /**
+     *   Return version of trigger file
+     *
+     *   @return     string      Version of trigger file
+     */
+    function getVersion()
+    {
+        global $langs;
+        $langs->load("admin");
+
+        if ($this->version == 'experimental') return $langs->trans("Experimental");
+        elseif ($this->version == 'dolibarr') return DOL_VERSION;
+        elseif ($this->version) return $this->version;
+        else return $langs->trans("Unknown");
+    }
+
+    /**
+     *      Function called when a Dolibarrr business event is done.
+     *      All functions "run_trigger" are triggered if file is inside directory htdocs/core/triggers
+     *
+     *      Following properties must be filled:
+     *      $object->actiontypecode (translation action code: AC_OTH, ...)
+     *      $object->actionmsg (note, long text)
+     *      $object->actionmsg2 (label, short text)
+     *      $object->sendtoid (id of contact)
+     *      $object->socid
+     *      Optionnal:
+     *      $object->fk_element
+     *      $object->elementtype
+     *
+     *      @param	string		$action		Event action code
+     *      @param  Object		$object     Object
+     *      @param  User		$user       Object user
+     *      @param  Translate	$langs      Object langs
+     *      @param  conf		$conf       Object conf
+     *      @return int         			<0 if KO, 0 if no triggered ran, >0 if OK
+     */
+    function run_trigger($action,$object,$user,$langs,$conf)
+    {
+		$key='MAIN_AGENDA_ACTIONAUTO_'.$action;
+        //dol_syslog("xxxxxxxxxxx".$key);
+
+        if (empty($conf->agenda->enabled)) return 0;     // Module not active, we do nothing
+		if (empty($conf->global->$key)) return 0;	// Log events not enabled for this action
+
+		$ok=0;
 
 		// Actions
 		if ($action == 'COMPANY_CREATE')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("other");
+            $langs->load("agenda");
 
 			$object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("NewCompanyToDolibarr",$object->nom);
             $object->actionmsg=$langs->transnoentities("NewCompanyToDolibarr",$object->nom);
-            if (! empty($object->prefix)) $object->actionmsg.=" (".$object->prefix.")";
+            if ($object->prefix) $object->actionmsg.=" (".$object->prefix.")";
+            //$this->desc.="\n".$langs->transnoentities("Customer").': '.yn($object->client);
+            //$this->desc.="\n".$langs->transnoentities("Supplier").': '.yn($object->fournisseur);
             $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
 
 			$object->sendtoid=0;
 			$object->socid=$object->id;
+			$ok=1;
         }
         elseif ($action == 'COMPANY_SENTBYMAIL')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("orders");
+            $langs->load("agenda");
 
             if (empty($object->actiontypecode)) $object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) dol_syslog('Trigger called with property actionmsg2 on object not defined', LOG_ERR);
@@ -97,11 +152,14 @@ class InterfaceActionsAuto extends DolibarrTriggers
 
             // Parameters $object->sendtoid defined by caller
             //$object->sendtoid=0;
+            $ok=1;
 		}
         elseif ($action == 'CONTRACT_VALIDATE')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("other");
             $langs->load("contracts");
+            $langs->load("agenda");
 
 			$object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("ContractValidatedInDolibarr",$object->ref);
@@ -109,10 +167,13 @@ class InterfaceActionsAuto extends DolibarrTriggers
             $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
 
             $object->sendtoid=0;
+			$ok=1;
 		}
 		elseif ($action == 'PROPAL_VALIDATE')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("propal");
+            $langs->load("agenda");
 
 			$object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("PropalValidatedInDolibarr",$object->ref);
@@ -120,10 +181,13 @@ class InterfaceActionsAuto extends DolibarrTriggers
             $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
 
 			$object->sendtoid=0;
+			$ok=1;
 		}
         elseif ($action == 'PROPAL_SENTBYMAIL')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("propal");
+            $langs->load("agenda");
 
             $object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("ProposalSentByEMail",$object->ref);
@@ -135,10 +199,13 @@ class InterfaceActionsAuto extends DolibarrTriggers
 
             // Parameters $object->sendtoid defined by caller
             //$object->sendtoid=0;
+            $ok=1;
 		}
 		elseif ($action == 'PROPAL_CLOSE_SIGNED')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("propal");
+            $langs->load("agenda");
 
 			$object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("PropalClosedSignedInDolibarr",$object->ref);
@@ -146,10 +213,13 @@ class InterfaceActionsAuto extends DolibarrTriggers
             $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
 
 			$object->sendtoid=0;
+			$ok=1;
 		}
 		elseif ($action == 'PROPAL_CLOSE_REFUSED')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("propal");
+            $langs->load("agenda");
 
 			$object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("PropalClosedRefusedInDolibarr",$object->ref);
@@ -157,10 +227,13 @@ class InterfaceActionsAuto extends DolibarrTriggers
             $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
 
 			$object->sendtoid=0;
+			$ok=1;
 		}
 		elseif ($action == 'ORDER_VALIDATE')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("orders");
+            $langs->load("agenda");
 
 			$object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("OrderValidatedInDolibarr",$object->ref);
@@ -168,10 +241,13 @@ class InterfaceActionsAuto extends DolibarrTriggers
             $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
 
 			$object->sendtoid=0;
+			$ok=1;
 		}
         elseif ($action == 'ORDER_SENTBYMAIL')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("orders");
+            $langs->load("agenda");
 
             $object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("OrderSentByEMail",$object->ref);
@@ -183,11 +259,14 @@ class InterfaceActionsAuto extends DolibarrTriggers
 
             // Parameters $object->sendtoid defined by caller
             //$object->sendtoid=0;
+            $ok=1;
 		}
 		elseif ($action == 'BILL_VALIDATE')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("other");
             $langs->load("bills");
+            $langs->load("agenda");
 
 			$object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("InvoiceValidatedInDolibarr",$object->ref);
@@ -195,11 +274,14 @@ class InterfaceActionsAuto extends DolibarrTriggers
             $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
 
 			$object->sendtoid=0;
+			$ok=1;
 		}
 		elseif ($action == 'BILL_UNVALIDATE')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("other");
             $langs->load("bills");
+            $langs->load("agenda");
 
 			$object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("InvoiceBackToDraftInDolibarr",$object->ref);
@@ -207,11 +289,14 @@ class InterfaceActionsAuto extends DolibarrTriggers
             $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
 
 			$object->sendtoid=0;
+			$ok=1;
 		}
         elseif ($action == 'BILL_SENTBYMAIL')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("other");
             $langs->load("bills");
+            $langs->load("agenda");
 
             $object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("InvoiceSentByEMail",$object->ref);
@@ -223,11 +308,14 @@ class InterfaceActionsAuto extends DolibarrTriggers
 
             // Parameters $object->sendtoid defined by caller
             //$object->sendtoid=0;
+            $ok=1;
 		}
 		elseif ($action == 'BILL_PAYED')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("other");
             $langs->load("bills");
+            $langs->load("agenda");
 
             // Values for this action can't be defined by caller.
 			$object->actiontypecode='AC_OTH_AUTO';
@@ -236,11 +324,14 @@ class InterfaceActionsAuto extends DolibarrTriggers
             $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
 
             $object->sendtoid=0;
+			$ok=1;
 		}
 		elseif ($action == 'BILL_CANCEL')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("other");
             $langs->load("bills");
+            $langs->load("agenda");
 
 			$object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("InvoiceCanceledInDolibarr",$object->ref);
@@ -248,11 +339,14 @@ class InterfaceActionsAuto extends DolibarrTriggers
             $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
 
             $object->sendtoid=0;
+			$ok=1;
 		}
 		elseif ($action == 'FICHINTER_VALIDATE')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("other");
             $langs->load("interventions");
+            $langs->load("agenda");
 
 			$object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("InterventionValidatedInDolibarr",$object->ref);
@@ -262,36 +356,30 @@ class InterfaceActionsAuto extends DolibarrTriggers
             $object->sendtoid=0;
 			$object->fk_element=0;
 			$object->elementtype='';
+			$ok=1;
 		}
         elseif ($action == 'FICHINTER_SENTBYMAIL')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("other");
             $langs->load("interventions");
+            $langs->load("agenda");
 
             $object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("InterventionSentByEMail",$object->ref);
             $object->actionmsg=$langs->transnoentities("InterventionSentByEMail",$object->ref);
             $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
 
-            // Parameters $object->sendtoid defined by caller
+            // Parameters $object->sendotid defined by caller
             //$object->sendtoid=0;
+            $ok=1;
         }
-        elseif ($action == 'FICHINTER_CLASSIFY_BILLED')
+    	elseif ($action == 'SHIPPING_VALIDATE')
         {
-            $langs->load("other");
-            $langs->load("interventions");
-
-            $object->actiontypecode='AC_OTH_AUTO';
-            if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("InterventionClassifiedBilled",$object->ref);
-            $object->actionmsg=$langs->transnoentities("InterventionClassifiedBilled",$object->ref);
-            $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
-
-            $object->sendtoid=0;
-        }
-        elseif ($action == 'SHIPPING_VALIDATE')
-        {
+        	dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         	$langs->load("other");
         	$langs->load("sendings");
+        	$langs->load("agenda");
 
         	$object->actiontypecode='AC_OTH_AUTO';
         	if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("ShippingValidated",$object->ref);
@@ -303,11 +391,14 @@ class InterfaceActionsAuto extends DolibarrTriggers
 
         	// Parameters $object->sendtoid defined by caller
         	//$object->sendtoid=0;
+        	$ok=1;
         }
 		elseif ($action == 'SHIPPING_SENTBYMAIL')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("other");
             $langs->load("sendings");
+            $langs->load("agenda");
 
             $object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("ShippingSentByEMail",$object->ref);
@@ -319,10 +410,13 @@ class InterfaceActionsAuto extends DolibarrTriggers
 
             // Parameters $object->sendtoid defined by caller
             //$object->sendtoid=0;
+            $ok=1;
 		}
 		elseif ($action == 'ORDER_SUPPLIER_VALIDATE')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("orders");
+            $langs->load("agenda");
 
 			$object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("OrderValidatedInDolibarr",$object->ref);
@@ -330,33 +424,14 @@ class InterfaceActionsAuto extends DolibarrTriggers
             $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
 
             $object->sendtoid=0;
-		}
-		elseif ($action == 'ORDER_SUPPLIER_APPROVE')
-		{
-			$langs->load("orders");
-
-			$object->actiontypecode='AC_OTH_AUTO';
-			if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("OrderApprovedInDolibarr",$object->ref);
-			$object->actionmsg=$langs->transnoentities("OrderApprovedInDolibarr",$object->ref);
-			$object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
-
-			$object->sendtoid=0;
-		}
-		elseif ($action == 'ORDER_SUPPLIER_REFUSE')
-		{
-			$langs->load("orders");
-
-			$object->actiontypecode='AC_OTH_AUTO';
-			if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("OrderRefusedInDolibarr",$object->ref);
-			$object->actionmsg=$langs->transnoentities("OrderRefusedInDolibarr",$object->ref);
-			$object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
-
-			$object->sendtoid=0;
+            $ok=1;
 		}
         elseif ($action == 'ORDER_SUPPLIER_SENTBYMAIL')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("other");
             $langs->load("bills");
+            $langs->load("agenda");
             $langs->load("orders");
 
             $object->actiontypecode='AC_OTH_AUTO';
@@ -367,13 +442,16 @@ class InterfaceActionsAuto extends DolibarrTriggers
                 $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
             }
 
-            // Parameters $object->sendtoid defined by caller
+            // Parameters $object->sendotid defined by caller
             //$object->sendtoid=0;
+            $ok=1;
         }
 		elseif ($action == 'BILL_SUPPLIER_VALIDATE')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("other");
             $langs->load("bills");
+            $langs->load("agenda");
 
 			$object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("InvoiceValidatedInDolibarr",$object->ref);
@@ -381,11 +459,14 @@ class InterfaceActionsAuto extends DolibarrTriggers
             $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
 
             $object->sendtoid=0;
+            $ok=1;
 		}
         elseif ($action == 'BILL_SUPPLIER_SENTBYMAIL')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("other");
             $langs->load("bills");
+            $langs->load("agenda");
             $langs->load("orders");
 
             $object->actiontypecode='AC_OTH_AUTO';
@@ -398,11 +479,14 @@ class InterfaceActionsAuto extends DolibarrTriggers
 
             // Parameters $object->sendtoid defined by caller
             //$object->sendtoid=0;
+            $ok=1;
         }
 		elseif ($action == 'BILL_SUPPLIER_PAYED')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("other");
             $langs->load("bills");
+            $langs->load("agenda");
 
 			$object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("InvoicePaidInDolibarr",$object->ref);
@@ -410,11 +494,14 @@ class InterfaceActionsAuto extends DolibarrTriggers
             $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
 
 			$object->sendtoid=0;
+			$ok=1;
 		}
 		elseif ($action == 'BILL_SUPPLIER_CANCELED')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("other");
             $langs->load("bills");
+            $langs->load("agenda");
 
 			$object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("InvoiceCanceledInDolibarr",$object->ref);
@@ -422,13 +509,16 @@ class InterfaceActionsAuto extends DolibarrTriggers
             $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
 
 			$object->sendtoid=0;
+			$ok=1;
 		}
 
         // Members
         elseif ($action == 'MEMBER_VALIDATE')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("other");
             $langs->load("members");
+            $langs->load("agenda");
 
 			$object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("MemberValidatedInDolibarr",$object->ref);
@@ -438,11 +528,14 @@ class InterfaceActionsAuto extends DolibarrTriggers
             $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
 
 			$object->sendtoid=0;
+			$ok=1;
         }
         elseif ($action == 'MEMBER_SUBSCRIPTION')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("other");
             $langs->load("members");
+            $langs->load("agenda");
 
 			$object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("MemberSubscriptionAddedInDolibarr",$object->ref);
@@ -454,11 +547,18 @@ class InterfaceActionsAuto extends DolibarrTriggers
             $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
 
 			$object->sendtoid=0;
+			$ok=1;
+        }
+        elseif ($action == 'MEMBER_MODIFY')
+        {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
         elseif ($action == 'MEMBER_RESILIATE')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("other");
             $langs->load("members");
+            $langs->load("agenda");
 
 			$object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("MemberResiliatedInDolibarr",$object->ref);
@@ -468,11 +568,14 @@ class InterfaceActionsAuto extends DolibarrTriggers
             $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
 
 			$object->sendtoid=0;
+			$ok=1;
         }
         elseif ($action == 'MEMBER_DELETE')
         {
+            dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $langs->load("other");
             $langs->load("members");
+            $langs->load("agenda");
 
 			$object->actiontypecode='AC_OTH_AUTO';
             if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("MemberDeletedInDolibarr",$object->ref);
@@ -482,130 +585,87 @@ class InterfaceActionsAuto extends DolibarrTriggers
             $object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
 
 			$object->sendtoid=0;
+			$ok=1;
         }
 
         // Projects
         elseif ($action == 'PROJECT_CREATE')
         {
+        	dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         	$langs->load("other");
         	$langs->load("projects");
+        	$langs->load("agenda");
 
         	$object->actiontypecode='AC_OTH_AUTO';
         	if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("ProjectCreatedInDolibarr",$object->ref);
         	$object->actionmsg=$langs->transnoentities("ProjectCreatedInDolibarr",$object->ref);
         	$object->actionmsg.="\n".$langs->transnoentities("Project").': '.$object->ref;
         	$object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
-
         	$object->sendtoid=0;
+        	$ok=1;
         }
 
-		// Project tasks
-		elseif($action == 'TASK_CREATE') {
-			$langs->load("other");
-			$langs->load("projects");
-
-			$object->actiontypecode='AC_OTH_AUTO';
-
-			if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("TaskCreatedInDolibarr",$object->ref);
-			$object->actionmsg=$langs->transnoentities("TaskCreatedInDolibarr",$object->ref);
-			$object->actionmsg.="\n".$langs->transnoentities("Task").': '.$object->ref;
-			$object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
-
-			$object->sendtoid=0;
-		}
-
-		elseif($action == 'TASK_MODIFY') {
-			$langs->load("other");
-			$langs->load("projects");
-
-			$object->actiontypecode='AC_OTH_AUTO';
-			if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("TaskModifiedInDolibarr",$object->ref);
-			$object->actionmsg=$langs->transnoentities("TaskModifieddInDolibarr",$object->ref);
-			$object->actionmsg.="\n".$langs->transnoentities("Task").': '.$object->ref;
-			$object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
-
-			$object->sendtoid=0;
-		}
-
-		elseif($action == 'TASK_DELETE') {
-			$langs->load("other");
-			$langs->load("projects");
-
-			$object->actiontypecode='AC_OTH_AUTO';
-			if (empty($object->actionmsg2)) $object->actionmsg2=$langs->transnoentities("TaskDeletedInDolibarr",$object->ref);
-			$object->actionmsg=$langs->transnoentities("TaskDeletedInDolibarr",$object->ref);
-			$object->actionmsg.="\n".$langs->transnoentities("Task").': '.$object->ref;
-			$object->actionmsg.="\n".$langs->transnoentities("Author").': '.$user->login;
-
-			$object->sendtoid=0;
-		}
-
-		// The trigger was enabled but we are missing the implementation, let the log know
-		else
-		{
-			dol_syslog("Trigger '".$this->name."' for action '$action' was ran by ".__FILE__." but no handler found for this action.", LOG_WARNING);
+		// If not found
+        /*
+        else
+        {
+            dol_syslog("Trigger '".$this->name."' for action '$action' was ran by ".__FILE__." but no handler found for this action.");
 			return 0;
-		}
-
-		dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
+        }
+        */
 
         // Add entry in event table
-		$now=dol_now();
+        if ($ok)
+        {
+			$now=dol_now();
 
-		if(isset($_SESSION['listofnames']))
-		{
-			$attachs=$_SESSION['listofnames'];
-			if($attachs && strpos($action,'SENTBYMAIL'))
+            require_once DOL_DOCUMENT_ROOT.'/contact/class/contact.class.php';
+            require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
+			$contactforaction=new Contact($this->db);
+            $societeforaction=new Societe($this->db);
+            if ($object->sendtoid > 0) $contactforaction->fetch($object->sendtoid);
+            if ($object->socid > 0)    $societeforaction->fetch($object->socid);
+
+			// Insertion action
+			require_once DOL_DOCUMENT_ROOT.'/comm/action/class/actioncomm.class.php';
+			$actioncomm = new ActionComm($this->db);
+			$actioncomm->type_code   = $object->actiontypecode;		// code of parent table llx_c_actioncomm (will be deprecated)
+			$actioncomm->code='AC_'.$action;
+			$actioncomm->label       = $object->actionmsg2;
+			$actioncomm->note        = $object->actionmsg;
+			$actioncomm->datep       = $now;
+			$actioncomm->datef       = $now;
+			$actioncomm->durationp   = 0;
+			$actioncomm->punctual    = 1;
+			$actioncomm->percentage  = -1;   // Not applicable
+			$actioncomm->contact     = $contactforaction;
+			$actioncomm->societe     = $societeforaction;
+			$actioncomm->author      = $user;   // User saving action
+			$actioncomm->usertodo    = $user;	// User action is assigned to (owner of action)
+			$actioncomm->userdone    = $user;	// User doing action (deprecated, not used anymore)
+
+			$actioncomm->fk_element  = $object->id;
+			$actioncomm->elementtype = $object->element;
+
+			$ret=$actioncomm->add($user);       // User qui saisit l'action
+			if ($ret > 0)
 			{
-				 $object->actionmsg.="\n".$langs->transnoentities("AttachedFiles").': '.$attachs;
+				$_SESSION['LAST_ACTION_CREATED'] = $ret;
+				return 1;
 			}
-		}
+			else
+			{
+                $error ="Failed to insert event : ".$actioncomm->error." ".join(',',$actioncomm->errors);
+                $this->error=$error;
+                $this->errors=$actioncomm->errors;
 
-        require_once DOL_DOCUMENT_ROOT.'/contact/class/contact.class.php';
-        require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
-		$contactforaction=new Contact($this->db);
-        $societeforaction=new Societe($this->db);
-        if ($object->sendtoid > 0) $contactforaction->fetch($object->sendtoid);
-        if ($object->socid > 0)    $societeforaction->fetch($object->socid);
-
-		// Insertion action
-		require_once DOL_DOCUMENT_ROOT.'/comm/action/class/actioncomm.class.php';
-		$actioncomm = new ActionComm($this->db);
-		$actioncomm->type_code   = $object->actiontypecode;		// code of parent table llx_c_actioncomm (will be deprecated)
-		$actioncomm->code='AC_'.$action;
-		$actioncomm->label       = $object->actionmsg2;
-		$actioncomm->note        = $object->actionmsg;
-		$actioncomm->datep       = $now;
-		$actioncomm->datef       = $now;
-		$actioncomm->durationp   = 0;
-		$actioncomm->punctual    = 1;
-		$actioncomm->percentage  = -1;   // Not applicable
-		$actioncomm->contact     = $contactforaction;
-		$actioncomm->societe     = $societeforaction;
-		$actioncomm->author      = $user;   // User saving action
-		$actioncomm->usertodo    = $user;	// User owner of action
-		//$actioncomm->userdone    = $user;	// User doing action
-
-		$actioncomm->fk_element  = $object->id;
-		$actioncomm->elementtype = $object->element;
-
-		$ret=$actioncomm->add($user);       // User qui saisit l'action
-		if ($ret > 0)
-		{
-			$_SESSION['LAST_ACTION_CREATED'] = $ret;
-			return 1;
-		}
-		else
-		{
-            $error ="Failed to insert event : ".$actioncomm->error." ".join(',',$actioncomm->errors);
-            $this->error=$error;
-            $this->errors=$actioncomm->errors;
-
-            dol_syslog("interface_modAgenda_ActionsAuto.class.php: ".$this->error, LOG_ERR);
-            return -1;
+                dol_syslog("interface_modAgenda_ActionsAuto.class.php: ".$this->error, LOG_ERR);
+                return -1;
+			}
 		}
 
 		return 0;
     }
 
 }
+?>

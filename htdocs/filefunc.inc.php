@@ -29,7 +29,7 @@
  *  \brief      File that include conf.php file and commons lib like functions.lib.php
  */
 
-if (! defined('DOL_VERSION')) define('DOL_VERSION','3.7.0-alpha');
+if (! defined('DOL_VERSION')) define('DOL_VERSION','3.5.5');
 if (! defined('EURO')) define('EURO',chr(128));
 
 // Define syslog constants
@@ -239,3 +239,4 @@ if (preg_match('/crypted:/i',$dolibarr_main_db_pass) || ! empty($dolibarr_main_d
 	else $dolibarr_main_db_pass = dol_decode($dolibarr_main_db_encrypted_pass);
 }
 
+?>
