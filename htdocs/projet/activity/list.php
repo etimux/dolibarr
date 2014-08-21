@@ -97,7 +97,7 @@ if ($action == 'addtime' && $user->rights->projet->creer)
     }
     else
     {
-	    setEventMessage($langs->trans("ErrorTimeSpentIsEmpty"), 'errors');
+        $mesg='<div class="error">'.$langs->trans("ErrorTimeSpentIsEmpty").'</div>';
     }
 }
 
@@ -126,11 +126,32 @@ if ($id)
 $tasksarray=$taskstatic->getTasksArray(0,0,($project->id?$project->id:$projectsListId),$socid,0);    // We want to see all task of project i am allowed to see, not only mine. Later only mine will be editable later.
 $projectsrole=$taskstatic->getUserRolesForProjectsOrTasks($user,0,($project->id?$project->id:$projectsListId),0);
 $tasksrole=$taskstatic->getUserRolesForProjectsOrTasks(0,$user,($project->id?$project->id:$projectsListId),0);
+//var_dump($tasksarray);
+//var_dump($projectsrole);
+//var_dump($taskrole);
+
+
+
+llxHeader("",$title,"");
 
 
 llxHeader("",$title,"");
 
 print_barre_liste($title, $page, $_SERVER["PHP_SELF"], "", $sortfield, $sortorder, "", $num);
+
+// Filter on user
+/*	dol_fiche_head('');
+	print '<table class="border" width="100%"><tr><td width="25%">'.$langs->trans("User").'</td>';
+	print '<td>';
+	if ($mine) print $user->getLoginUrl(1);
+	print '</td>';
+	print '</tr></table>';
+	dol_fiche_end();
+*/
+
+
+dol_htmloutput_mesg($mesg);
+
 
 print '<form name="addtime" method="POST" action="'.$_SERVER["PHP_SELF"].'?id='.$project->id.'">';
 print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';

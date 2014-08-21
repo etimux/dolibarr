@@ -459,7 +459,7 @@ function projectLinesb(&$inc, $parent, $lines, &$level, &$projectsrole, &$tasksr
 			if (empty($mine) || ! empty($tasksrole[$lines[$i]->id]))
 			{
 				print "<tr ".$bc[$var].">\n";
-	
+
 				// Project
 				print "<td>";
 				$projectstatic->id=$lines[$i]->fk_project;
@@ -468,14 +468,14 @@ function projectLinesb(&$inc, $parent, $lines, &$level, &$projectsrole, &$tasksr
 				$projectstatic->label=$langs->transnoentitiesnoconv("YourRole").': '.$projectsrole[$lines[$i]->fk_project];
 				print $projectstatic->getNomUrl(1);
 				print "</td>";
-	
+
 				// Ref
 				print '<td>';
 				$taskstatic->id=$lines[$i]->id;
 				$taskstatic->ref=$lines[$i]->id;
 				print $taskstatic->getNomUrl(1);
 				print '</td>';
-	
+
 				// Label task
 				print "<td>";
 				for ($k = 0 ; $k < $level ; $k++)
@@ -486,28 +486,28 @@ function projectLinesb(&$inc, $parent, $lines, &$level, &$projectsrole, &$tasksr
 				$taskstatic->ref=$lines[$i]->label;
 				print $taskstatic->getNomUrl(0);
 				print "</td>\n";
-	
+
 				// Date start
 				print '<td align="center">';
 				print dol_print_date($lines[$i]->date_start,'dayhour');
 				print '</td>';
-	
+
 				// Date end
 				print '<td align="center">';
 				print dol_print_date($lines[$i]->date_end,'dayhour');
 				print '</td>';
-	
+
 				// Planned Workload
 				print '<td align="right">';
 				if ($lines[$i]->planned_workload) print convertSecondToTime($lines[$i]->planned_workload,'allhourmin');
 				else print '--:--';
 				print '</td>';
-	
+
 				// Progress declared %
 				print '<td align="right">';
 				print $lines[$i]->progress.' %';
 				print '</td>';
-	
+
 				// Time spent
 				print '<td align="right">';
 				if ($lines[$i]->duration)
@@ -518,7 +518,7 @@ function projectLinesb(&$inc, $parent, $lines, &$level, &$projectsrole, &$tasksr
 				}
 				else print '--:--';
 				print "</td>\n";
-	
+
 				$disabledproject=1;$disabledtask=1;
 				//print "x".$lines[$i]->fk_project;
 				//var_dump($lines[$i]);
@@ -534,7 +534,7 @@ function projectLinesb(&$inc, $parent, $lines, &$level, &$projectsrole, &$tasksr
 				{
 					$disabledtask=1;
 				}
-	
+
 				print '<td class="nowrap">';
 				$s =$form->select_date('',$lines[$i]->id,'','','',"addtime",1,0,1,$disabledtask);
 				$s.='&nbsp;&nbsp;&nbsp;';
@@ -546,7 +546,7 @@ function projectLinesb(&$inc, $parent, $lines, &$level, &$projectsrole, &$tasksr
 				if ((! $lines[$i]->public) && $disabledproject) print $form->textwithpicto('',$langs->trans("YouAreNotContactOfProject"));
 				else if ($disabledtask) print $form->textwithpicto('',$langs->trans("TaskIsNotAffectedToYou"));
 				print '</td>';
-	
+
 				print "</tr>\n";
 			}
 
