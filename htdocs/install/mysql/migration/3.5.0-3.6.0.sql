@@ -38,7 +38,7 @@ create table llx_c_email_templates
 (
   rowid           integer AUTO_INCREMENT PRIMARY KEY,
   entity		  integer DEFAULT 1 NOT NULL,	  -- multi company id
-  type_template   varchar(32),  -- template for wich type of email (send invoice by email, send order, ...)
+  type_template   varchar(32),  -- template for which type of email (send invoice by email, send order, ...)
   datec           datetime,
   label           varchar(255),
   content         text
@@ -296,6 +296,9 @@ create table llx_c_type_resource
   label 	    varchar(64)	NOT NULL,
   active  	    tinyint DEFAULT 1  NOT NULL
 )ENGINE=innodb;
+
+-- Fix llx_c_type_resource when you update from a 3.6-beta
+ALTER TABLE llx_c_type_resource CHANGE libelle label VARCHAR(64) NOT NULL;
 
 ALTER TABLE llx_c_type_resource ADD UNIQUE INDEX uk_c_type_resource_id (label, code);
 

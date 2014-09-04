@@ -55,7 +55,7 @@ $excludeuser=array();
  */
 
 @set_time_limit(0);
-print "***** ".$script_file." (".$version.") pid=".getmypid()." *****\n";
+print "***** ".$script_file." (".$version.") pid=".dol_getmypid()." *****\n";
 dol_syslog($script_file." launched with arg ".join(',',$argv));
 
 // List of fields to get from LDAP
@@ -129,11 +129,11 @@ if (empty($conf->global->LDAP_USER_DN))
 }
 
 
-// Charge tableau de correspondance des pays
+// Load table of correspondence of countries
 $hashlib2rowid=array();
 $countries=array();
-$sql = "SELECT rowid, code, libelle, active";
-$sql.= " FROM ".MAIN_DB_PREFIX."c_pays";
+$sql = "SELECT rowid, code, label, active";
+$sql.= " FROM ".MAIN_DB_PREFIX."c_country";
 $sql.= " WHERE active = 1";
 $sql.= " ORDER BY code ASC";
 $resql=$db->query($sql);
@@ -148,9 +148,9 @@ if ($resql)
 			$obj = $db->fetch_object($resql);
 			if ($obj)
 			{
-				//print 'Load cache for country '.strtolower($obj->libelle).' rowid='.$obj->rowid."\n";
-				$hashlib2rowid[strtolower($obj->libelle)]=$obj->rowid;
-				$countries[$obj->rowid]=array('rowid' => $obj->rowid, 'label' => $obj->libelle, 'code' => $obj->code);
+				//print 'Load cache for country '.strtolower($obj->label).' rowid='.$obj->rowid."\n";
+				$hashlib2rowid[strtolower($obj->label)]=$obj->rowid;
+				$countries[$obj->rowid]=array('rowid' => $obj->rowid, 'label' => $obj->label, 'code' => $obj->code);
 			}
 			$i++;
 		}

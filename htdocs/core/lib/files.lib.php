@@ -597,7 +597,7 @@ function dol_move_uploaded_file($src_file, $dest_file, $allowoverwrite, $disable
 	global $conf, $db, $user, $langs;
 	global $object, $hookmanager;
 
-	$error=0;
+	$reshook=0;
 	$file_name = $dest_file;
 
 	if (empty($nohook))
@@ -663,8 +663,7 @@ function dol_move_uploaded_file($src_file, $dest_file, $allowoverwrite, $disable
 		}
 
 		// Security:
-		// On interdit fichiers caches, remontees de repertoire ainsi que les pipe dans
-		// les noms de fichiers.
+		// On interdit fichiers caches, remontees de repertoire ainsi que les pipe dans les noms de fichiers.
 		if (preg_match('/^\./',$dest_file) || preg_match('/\.\./',$dest_file) || preg_match('/[<>|]/',$dest_file))
 		{
 			dol_syslog("Refused to deliver file ".$dest_file, LOG_WARNING);
@@ -677,7 +676,13 @@ function dol_move_uploaded_file($src_file, $dest_file, $allowoverwrite, $disable
 		$reshook=$hookmanager->executeHooks('moveUploadedFile', $parameters, $object);
 	}
 
-	if (empty($reshook))
+	if ($reshook < 0)	// At least one blocking error returned by one hook
+	{
+		$errmsg = join(',', $hookmanager->errors);
+		if (empty($errmsg)) $errmsg = 'ErrorReturnedBySomeHooks';	// Should not occurs. Added if hook is bugged and does not set ->errors when there is error.
+		return $errmsg;
+	}
+	elseif (empty($reshook))
 	{
 		// The file functions must be in OS filesystem encoding.
 		$src_file_osencoded=dol_osencode($src_file);
@@ -710,8 +715,8 @@ function dol_move_uploaded_file($src_file, $dest_file, $allowoverwrite, $disable
 			return -3;	// Unknown error
 		}
 	}
-	else
-		return $reshook;
+
+	return 1;	// Success
 }
 
 /**
@@ -802,14 +807,15 @@ function dol_delete_dir($dir,$nophperrors=0)
 }
 
 /**
- *  Remove a directory $dir and its subdirectories
+ *  Remove a directory $dir and its subdirectories (or only files and subdirectories)
  *
  *  @param	string	$dir            Dir to delete
  *  @param  int		$count          Counter to count nb of deleted elements
  *  @param  int		$nophperrors    Disable all PHP output errors
+ *  @param	int		$onlysub		Delete only files and subdir, not main directory
  *  @return int             		Number of files and directory removed
  */
-function dol_delete_dir_recursive($dir,$count=0,$nophperrors=0)
+function dol_delete_dir_recursive($dir,$count=0,$nophperrors=0,$onlysub=0)
 {
     dol_syslog("functions.lib:dol_delete_dir_recursive ".$dir,LOG_DEBUG);
     if (dol_is_dir($dir))
@@ -836,9 +842,13 @@ function dol_delete_dir_recursive($dir,$count=0,$nophperrors=0)
                 }
             }
             closedir($handle);
-            dol_delete_dir($dir,$nophperrors);
-            $count++;
-            //echo "removing $dir<br>\n";
+
+            if (empty($onlysub))
+            {
+	            dol_delete_dir($dir,$nophperrors);
+    	        $count++;
+        	    //echo "removing $dir<br>\n";
+            }
         }
     }
 
@@ -1581,6 +1591,16 @@ function dol_check_secure_access_document($modulepart,$original_file,$entity,$fu
 		}
 		$original_file=$conf->projet->dir_output.'/'.$original_file;
 		$sqlprotectagainstexternals = "SELECT fk_soc as fk_soc FROM ".MAIN_DB_PREFIX."projet WHERE ref='".$db->escape($refname)."' AND entity=".$conf->entity;
+	}
+	// Wrapping for interventions
+	else if ($modulepart == 'fichinter')
+	{
+		if ($fuser->rights->ficheinter->lire || preg_match('/^specimen/i',$original_file))
+		{
+			$accessallowed=1;
+		}
+		$original_file=$conf->ficheinter->dir_output.'/'.$original_file;
+		$sqlprotectagainstexternals = "SELECT fk_soc as fk_soc FROM ".MAIN_DB_PREFIX."fichinter WHERE ref='".$db->escape($refname)."' AND entity=".$conf->entity;
 	}
 
 	// Wrapping pour les commandes fournisseurs

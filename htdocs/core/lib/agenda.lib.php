@@ -73,15 +73,23 @@ function print_actions_filter($form, $canedit, $status, $year, $month, $day, $sh
 		//print ' &nbsp;</td><td class="nowrap maxwidthonsmartphone">';
 		//print $form->select_dolusers($filtera, 'userasked', 1, '', ! $canedit);
 		//print ' &nbsp; '.$langs->trans("or") . ' ';
-		print $langs->trans("ActionsForUser").' &nbsp; ';
+		print $langs->trans("ActionAffectedTo").' &nbsp; ';
 		print '</td><td class="nowrap maxwidthonsmartphone">';
-		//print ' &nbsp;';
+		//print $langs->trans("User");
 		print $form->select_dolusers($filtert, 'usertodo', 1, '', ! $canedit);
-		print ajax_combobox('usertodo');
-		print ' &nbsp; '.$langs->trans("or") . ' ';
-		print $langs->trans("ActionsForUsersGroup").' &nbsp; ';
+		if (! empty($conf->use_javascript_ajax))
+		{
+			include_once DOL_DOCUMENT_ROOT . '/core/lib/ajax.lib.php';
+			print ajax_combobox('usertodo');
+		}
+		if (empty($conf->dol_optimize_smallscreen)) print ' &nbsp; '.$langs->trans("or") . ' ';
+		else print '<br>';
+		print $langs->trans("Group").' &nbsp; ';
 		print $form->select_dolgroups($usergroupid, 'usergroup', 1, '', ! $canedit);
-		print ajax_combobox('usergroup');
+		if (! empty($conf->use_javascript_ajax))
+		{
+			print ajax_combobox('usergroup');
+		}
 		print '</td></tr>';
 
 		/*print '<tr>';
@@ -352,7 +360,7 @@ function show_array_last_actions_done($max=5)
 /**
  * Prepare array with list of tabs
  *
- * @return  array				Array of tabs to shoc
+ * @return  array				Array of tabs to show
  */
 function agenda_prepare_head()
 {
@@ -397,7 +405,7 @@ function agenda_prepare_head()
  * Prepare array with list of tabs
  *
  * @param   object	$object		Object related to tabs
- * @return  array				Array of tabs to shoc
+ * @return  array				Array of tabs to show
  */
 function actions_prepare_head($object)
 {

@@ -28,11 +28,13 @@ create table llx_user
 
   datec             datetime,
   tms               timestamp,
+  fk_user_creat     integer,
+  fk_user_modif     integer,
   login             varchar(24) NOT NULL,
   pass              varchar(32),
   pass_crypted      varchar(128),
   pass_temp         varchar(32),			    -- temporary password when asked for forget password
-  civilite          varchar(6),
+  civility          varchar(6),
   lastname          varchar(50),
   firstname         varchar(50),
   address           varchar(255),                        		-- user personal address

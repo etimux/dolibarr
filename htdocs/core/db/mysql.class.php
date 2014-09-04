@@ -34,9 +34,9 @@ class DoliDBMysql extends DoliDB
 	//! Database type
 	public $type='mysql';
 	//! Database label
-	static $label='MySQL';
+	const LABEL='MySQL';
 	//! Version min database
-	static $versionmin=array(4,1,0);
+	const VERSIONMIN='4.1.0';
 	//! Resultset of last query
 	private $_results;
 
@@ -252,6 +252,8 @@ class DoliDBMysql extends DoliDB
 	{
 		$query = trim($query);
 
+		if (! in_array($query,array('BEGIN','COMMIT','ROLLBACK'))) dol_syslog('sql='.$query, LOG_DEBUG);
+
 		if (! $this->database_name)
 		{
 			// Ordre SQL ne necessitant pas de connexion a une base (exemple: CREATE DATABASE)
@@ -263,8 +265,6 @@ class DoliDBMysql extends DoliDB
 			$ret = mysql_query($query, $this->db);
 		}
 
-		dol_syslog('sql='.$query, LOG_DEBUG);
-
 		if (! preg_match("/^COMMIT/i",$query) && ! preg_match("/^ROLLBACK/i",$query))
 		{
 			// Si requete utilisateur, on la sauvegarde ainsi que son resultset
@@ -274,8 +274,7 @@ class DoliDBMysql extends DoliDB
 				$this->lasterror = $this->error();
 				$this->lasterrno = $this->errno();
 
-				dol_syslog(get_class($this)."::query SQL Error query: ".$query, LOG_ERR);
-                dol_syslog(get_class($this)."::query SQL Error message: ".$this->lasterror." (".$this->lasterrno.")", LOG_ERR);
+                dol_syslog(get_class($this)."::query SQL Error message: ".$this->lasterrno." ".$this->lasterror, LOG_ERR);
 			}
 			$this->lastquery=$query;
 			$this->_results = $ret;
@@ -829,9 +828,14 @@ class DoliDBMysql extends DoliDB
         $resql=$this->query($sql);
         if (! $resql)
         {
-            if ($this->lasterrno != 'DB_ERROR_USER_ALREADY_EXISTS') 
+            if ($this->lasterrno != 'DB_ERROR_USER_ALREADY_EXISTS')
             {
 	            return -1;
+            }
+            else
+			{
+            	// If user already exists, we continue to set permissions
+            	dol_syslog(get_class($this)."::DDLCreateUser sql=".$sql, LOG_WARNING);
             }
         }
         $sql = "GRANT ALL PRIVILEGES ON ".$this->escape($dolibarr_main_db_name).".* TO '".$this->escape($dolibarr_main_db_user)."'@'".$this->escape($dolibarr_main_db_host)."' IDENTIFIED BY '".$this->escape($dolibarr_main_db_pass)."'";

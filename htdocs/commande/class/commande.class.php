@@ -1,7 +1,7 @@
 <?php
 /* Copyright (C) 2003-2006 Rodolphe Quiedeville <rodolphe@quiedeville.org>
  * Copyright (C) 2004-2012 Laurent Destailleur  <eldy@users.sourceforge.net>
- * Copyright (C) 2005-2013 Regis Houssin        <regis.houssin@capnetworks.com>
+ * Copyright (C) 2005-2014 Regis Houssin        <regis.houssin@capnetworks.com>
  * Copyright (C) 2006      Andre Cianfarani     <acianfa@free.fr>
  * Copyright (C) 2010-2014 Juanjo Menent        <jmenent@2byte.es>
  * Copyright (C) 2011      Jean Heimburger      <jean@tiaris.info>
@@ -9,7 +9,7 @@
  * Copyright (C) 2013      Florian Henry		<florian.henry@open-concept.pro>
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU  *General Public License as published by
+ * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
@@ -72,6 +72,7 @@ class Commande extends CommonOrder
     var $date;				// Date commande
     var $date_commande;		// Date commande (deprecated)
     var $date_livraison;	// Date livraison souhaitee
+    var $shipping_method_id;
     var $fk_remise_except;
     var $remise_percent;
     var $total_ht;			// Total net of tax
@@ -138,7 +139,7 @@ class Commande extends CommonOrder
 		{
 	            $file = $conf->global->COMMANDE_ADDON.".php";
 	            $classname = $conf->global->COMMANDE_ADDON;
-	
+
 	            // Include file with class
 	            foreach ($conf->file->dol_document_root as $dirroot)
 	            {
@@ -260,7 +261,7 @@ class Commande extends CommonOrder
                         // We decrement stock of product (and sub-products)
                         $result=$mouvP->livraison($user, $this->lines[$i]->fk_product, $idwarehouse, $this->lines[$i]->qty, $this->lines[$i]->subprice, $langs->trans("OrderValidatedInDolibarr",$num));
                         if ($result < 0)
-                        { 
+                        {
                         	$error++;
                         	$this->error=$mouvP->error;
                         }
@@ -303,7 +304,7 @@ class Commande extends CommonOrder
         {
             // Call trigger
             $result=$this->call_trigger('ORDER_VALIDATE',$user);
-            if ($result < 0) $error++;            
+            if ($result < 0) $error++;
             // End call triggers
         }
 
@@ -434,7 +435,7 @@ class Commande extends CommonOrder
         {
             // Call trigger
             $result=$this->call_trigger('ORDER_REOPEN',$user);
-            if ($result < 0) $error++;            
+            if ($result < 0) $error++;
             // End call triggers
         }
         else
@@ -493,9 +494,9 @@ class Commande extends CommonOrder
             {
 	            // Call trigger
 	            $result=$this->call_trigger('ORDER_CLOSE',$user);
-	            if ($result < 0) $error++;            
+	            if ($result < 0) $error++;
 	            // End call triggers
- 
+
                 if (! $error)
                 {
                 	$this->statut=3;
@@ -556,7 +557,7 @@ class Commande extends CommonOrder
 						$mouvP = new MouvementStock($this->db);
 						// We increment stock of product (and sub-products)
 						$result=$mouvP->reception($user, $this->lines[$i]->fk_product, $idwarehouse, $this->lines[$i]->qty, $this->lines[$i]->subprice, $langs->trans("OrderCanceledInDolibarr",$this->ref));
-						if ($result < 0) 
+						if ($result < 0)
 						{
 							$error++;
 							$this->error=$mouvP->error;
@@ -570,7 +571,7 @@ class Commande extends CommonOrder
 			{
 	            // Call trigger
 	            $result=$this->call_trigger('ORDER_CANCEL',$user);
-	            if ($result < 0) $error++;            
+	            if ($result < 0) $error++;
 	            // End call triggers
 			}
 
@@ -643,6 +644,7 @@ class Commande extends CommonOrder
         $sql = "INSERT INTO ".MAIN_DB_PREFIX."commande (";
         $sql.= " ref, fk_soc, date_creation, fk_user_author, fk_projet, date_commande, source, note_private, note_public, ref_client, ref_int";
         $sql.= ", model_pdf, fk_cond_reglement, fk_mode_reglement, fk_account, fk_availability, fk_input_reason, date_livraison, fk_delivery_address";
+        $sql.= ", fk_shipping_method";
         $sql.= ", remise_absolue, remise_percent";
         $sql.= ", entity";
         $sql.= ")";
@@ -662,6 +664,7 @@ class Commande extends CommonOrder
         $sql.= ", ".($this->demand_reason_id>0?"'".$this->demand_reason_id."'":"null");
         $sql.= ", ".($this->date_livraison?"'".$this->db->idate($this->date_livraison)."'":"null");
         $sql.= ", ".($this->fk_delivery_address>0?$this->fk_delivery_address:'NULL');
+        $sql.= ", ".($this->shipping_method_id>0?$this->shipping_method_id:'NULL');
         $sql.= ", ".($this->remise_absolue>0?$this->remise_absolue:'NULL');
         $sql.= ", '".$this->remise_percent."'";
         $sql.= ", ".$conf->entity;
@@ -748,9 +751,10 @@ class Commande extends CommonOrder
                         		if ($origin == 'propal' && $origin_id)
                         		{
                         			// On recupere les differents contact interne et externe
-                        			$prop = new Propal($this->db, $this->socid, $origin_id);
+                        			$prop = new Propal($this->db);
+									$prop->fetch($origin_id);
 
-                        			// On recupere le commercial suivi propale
+                        			// We get ids of sales representatives of proposal
                         			$this->userid = $prop->getIdcontact('internal', 'SALESREPFOLL');
 
                         			if ($this->userid)
@@ -759,7 +763,7 @@ class Commande extends CommonOrder
                         				$this->add_contact($this->userid[0], 'SALESREPFOLL', 'internal');
                         			}
 
-                        			// On recupere le contact client suivi propale
+                        			// We get ids of customer follower of proposal
                         			$this->contactid = $prop->getIdcontact('external', 'CUSTOMER');
 
                         			if ($this->contactid)
@@ -797,7 +801,7 @@ class Commande extends CommonOrder
                     {
 			            // Call trigger
 			            $result=$this->call_trigger('ORDER_CREATE',$user);
-			            if ($result < 0) $error++;            
+			            if ($result < 0) $error++;
 			            // End call triggers
                     }
 
@@ -892,7 +896,7 @@ class Commande extends CommonOrder
 
             // Call trigger
             $result=$this->call_trigger('ORDER_CLONE',$user);
-            if ($result < 0) $error++;            
+            if ($result < 0) $error++;
             // End call triggers
         }
 
@@ -971,6 +975,7 @@ class Commande extends CommonOrder
             $this->availability_id      = $object->availability_id;
             $this->demand_reason_id     = $object->demand_reason_id;
             $this->date_livraison       = $object->date_livraison;
+            $this->shipping_method_id   = $object->shipping_method_id;
             $this->fk_delivery_address  = $object->fk_delivery_address;
             $this->contact_id           = $object->contactid;
             $this->ref_client           = $object->ref_client;
@@ -1302,6 +1307,7 @@ class Commande extends CommonOrder
         $sql.= ', c.fk_account';
         $sql.= ', c.date_commande';
         $sql.= ', c.date_livraison';
+        $sql.= ', c.fk_shipping_method';
         $sql.= ', c.fk_projet, c.remise_percent, c.remise, c.remise_absolue, c.source, c.facture as billed';
         $sql.= ', c.note_private, c.note_public, c.ref_client, c.ref_ext, c.ref_int, c.model_pdf, c.fk_delivery_address, c.extraparams';
         $sql.= ', p.code as mode_reglement_code, p.libelle as mode_reglement_libelle';
@@ -1365,6 +1371,7 @@ class Commande extends CommonOrder
                 $this->demand_reason_id		= $obj->fk_input_reason;
                 $this->demand_reason_code	= $obj->demand_reason_code;
                 $this->date_livraison		= $this->db->jdate($obj->date_livraison);
+                $this->shipping_method_id   = ($obj->fk_shipping_method>0)?$obj->fk_shipping_method:null;
                 $this->fk_delivery_address	= $obj->fk_delivery_address;
 
                 $this->extraparams			= (array) json_decode($obj->extraparams, true);
@@ -2197,7 +2204,7 @@ class Commande extends CommonOrder
 		{
             // Call trigger
             $result=$this->call_trigger('ORDER_CLASSIFY_BILLED',$user);
-            if ($result < 0) $error++;            
+            if ($result < 0) $error++;
             // End call triggers
 
 			if (! $error)
@@ -2416,7 +2423,7 @@ class Commande extends CommonOrder
         {
             // Call trigger
             $result=$this->call_trigger('ORDER_DELETE',$user);
-            if ($result < 0) $error++;            
+            if ($result < 0) $error++;
             // End call triggers
         }
 
@@ -3158,7 +3165,7 @@ class OrderLine extends CommonOrderLine
 
             // Call trigger
             $result=$this->call_trigger('LINEORDER_DELETE',$user);
-            if ($result < 0) $error++;            
+            if ($result < 0) $error++;
             // End call triggers
 
 	        if (!$error) {
@@ -3281,7 +3288,7 @@ class OrderLine extends CommonOrderLine
             {
 	            // Call trigger
 	            $result=$this->call_trigger('LINEORDER_INSERT',$user);
-	            if ($result < 0) $error++;            
+	            if ($result < 0) $error++;
 	            // End call triggers
             }
 
@@ -3396,7 +3403,7 @@ class OrderLine extends CommonOrderLine
 			{
 	            // Call trigger
 	            $result=$this->call_trigger('LINEORDER_UPDATE',$user);
-	            if ($result < 0) $error++;            
+	            if ($result < 0) $error++;
 	            // End call triggers
 			}
 

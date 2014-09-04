@@ -508,7 +508,7 @@ function dolibarr_set_const($db, $name, $value, $type='chaine', $visible=0, $not
 /**
  * Prepare array with list of tabs
  *
- * @return  array				Array of tabs to shoc
+ * @return  array				Array of tabs to show
  */
 function security_prepare_head()
 {
@@ -862,9 +862,10 @@ function unActivateModule($value, $requiredby=1)
  * 	@param		array		&$tabrowid			Tabrowid
  * 	@param		array		&$tabcond			Tabcond
  * 	@param		array		&$tabhelp			Tabhelp
+ * 	@param		array		&$tabfieldcheck		Tabfieldcheck
  * 	@return		int			1
  */
-function complete_dictionary_with_modules(&$taborder,&$tabname,&$tablib,&$tabsql,&$tabsqlsort,&$tabfield,&$tabfieldvalue,&$tabfieldinsert,&$tabrowid,&$tabcond,&$tabhelp)
+function complete_dictionary_with_modules(&$taborder,&$tabname,&$tablib,&$tabsql,&$tabsqlsort,&$tabfield,&$tabfieldvalue,&$tabfieldinsert,&$tabrowid,&$tabcond,&$tabhelp,&$tabfieldcheck)
 {
     global $db, $modules, $conf, $langs;
 
@@ -977,6 +978,7 @@ function complete_dictionary_with_modules(&$taborder,&$tabname,&$tablib,&$tabsql
                                 foreach($objMod->dictionaries['tabfieldinsert'] as $val) $tabfieldinsert[] = $val;
                                 foreach($objMod->dictionaries['tabrowid'] as $val) $tabrowid[] = $val;
                                 foreach($objMod->dictionaries['tabcond'] as $val) $tabcond[] = $val;
+                                foreach($objMod->dictionaries['tabfieldcheck'] as $val) $tabfieldcheck[] = $val;
                                 if (! empty($objMod->dictionaries['tabhelp'])) foreach($objMod->dictionaries['tabhelp'] as $val) $tabhelp[] = $val;
                                 //foreach($objMod->dictionaries['tabsqlsort'] as $val) $tablib[] = $val;
                                 //$tabname = array_merge ($tabname, $objMod->dictionaries['tabname']);

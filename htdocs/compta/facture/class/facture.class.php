@@ -593,6 +593,8 @@ class Facture extends CommonInvoice
 
 		// Load source object
 		$objFrom = dol_clone($this);
+		
+		
 
 		// Change socid if needed
 		if (! empty($socid) && $socid != $this->socid)
@@ -635,10 +637,22 @@ class Facture extends CommonInvoice
 				unset($this->products[$i]);	// Tant que products encore utilise
 			}
 		}
-
+		
 		// Create clone
 		$result=$this->create($user);
 		if ($result < 0) $error++;
+		else {
+			// copy internal contacts
+			if ($this->copy_linked_contact($objFrom, 'internal') < 0)
+				$error++;
+			
+			// copy external contacts if same company
+			elseif ($objFrom->socid == $this->socid)
+			{
+				if ($this->copy_linked_contact($objFrom, 'external') < 0)
+					$error++;
+			}
+		}
 
 		if (! $error)
 		{
@@ -1749,16 +1763,6 @@ class Facture extends CommonInvoice
 				}
 			}
 
-			// Set new ref and define current statut
-			if (! $error)
-			{
-				$this->ref = $num;
-				$this->facnumber=$num;
-				$this->statut=1;
-				$this->brouillon=0;
-				$this->date_validation=$now;
-			}
-
 			// Trigger calls
 			if (! $error)
 			{
@@ -1767,6 +1771,16 @@ class Facture extends CommonInvoice
 	            if ($result < 0) $error++;    
 	            //TODO: Restoring ref, facnumber, statut, brouillon to previous value if trigger fail           
 	            // End call triggers
+			}
+			
+			// Set new ref and define current statut
+			if (! $error)
+			{
+				$this->ref = $num;
+				$this->facnumber=$num;
+				$this->statut=1;
+				$this->brouillon=0;
+				$this->date_validation=$now;
 			}
 		}
 		else

@@ -24,6 +24,7 @@
  * 	\brief      Fichier de la classe des gestion des fiches interventions
  */
 require_once DOL_DOCUMENT_ROOT .'/core/class/commonobject.class.php';
+require_once DOL_DOCUMENT_ROOT .'/core/class/commonobjectline.class.php';
 
 
 /**
@@ -166,6 +167,17 @@ class Fichinter extends CommonObject
 				$resql=$this->db->query($sql);
 				if (! $resql) $error++;
 			}
+
+			if (empty($conf->global->MAIN_EXTRAFIELDS_DISABLED)) // For avoid conflicts if trigger used
+            {
+
+            	$result=$this->insertExtraFields();
+            	if ($result < 0)
+            	{
+            		$error++;
+            	}
+            }
+
 			// Add linked object
 			if (! $error && $this->origin && $this->origin_id)
 			{
@@ -223,7 +235,7 @@ class Fichinter extends CommonObject
 		$this->db->begin();
 
 		$sql = "UPDATE ".MAIN_DB_PREFIX."fichinter SET ";
-		$sql.= ", description  = '".$this->db->escape($this->description)."'";
+		$sql.= "description  = '".$this->db->escape($this->description)."'";
 		$sql.= ", duree = ".$this->duree;
 		$sql.= ", fk_projet = ".$this->fk_project;
 		$sql.= ", note_private = ".($this->note_private?"'".$this->db->escape($this->note_private)."'":"null");
@@ -266,7 +278,7 @@ class Fichinter extends CommonObject
 		$sql.= " f.datec,";
 		$sql.= " f.date_valid as datev,";
 		$sql.= " f.tms as datem,";
-		$sql.= " f.duree, f.fk_projet, f.note_public, f.note_private, f.model_pdf, f.extraparams";
+		$sql.= " f.duree, f.fk_projet, f.note_public, f.note_private, f.model_pdf, f.extraparams, fk_contrat";
 		$sql.= " FROM ".MAIN_DB_PREFIX."fichinter as f";
 		if ($ref) $sql.= " WHERE f.ref='".$this->db->escape($ref)."'";
 		else $sql.= " WHERE f.rowid=".$rowid;
@@ -292,6 +304,7 @@ class Fichinter extends CommonObject
 				$this->note_public  = $obj->note_public;
 				$this->note_private = $obj->note_private;
 				$this->modelpdf     = $obj->model_pdf;
+				$this->fk_contrat	= $obj->fk_contrat;
 
 				$this->extraparams	= (array) json_decode($obj->extraparams, true);
 
@@ -364,7 +377,7 @@ class Fichinter extends CommonObject
 	 */
 	function setValid($user)
 	{
-		global $langs, $conf;
+		global $conf;
 		require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
 
 		$error=0;
@@ -459,31 +472,6 @@ class Fichinter extends CommonObject
 				dol_syslog(get_class($this)."::setValid ".$this->error,LOG_ERR);
 				return -1;
 			}
-		}
-	}
-
-	/**
-	 * 	Set intervetnion as billed
-	 *
-	 *  @return int     <0 si ko, >0 si ok
-	 */
-	function setBilled()
-	{
-		global $conf;
-
-		$sql = 'UPDATE '.MAIN_DB_PREFIX.'fichinter SET fk_statut = 2';
-		$sql.= ' WHERE rowid = '.$this->id;
-		$sql.= " AND entity = ".$conf->entity;
-		$sql.= " AND fk_statut = 1";
-
-		if ($this->db->query($sql) )
-		{
-			return 1;
-		}
-		else
-		{
-			dol_print_error($this->db);
-			return -1;
 		}
 	}
 
@@ -877,11 +865,12 @@ class Fichinter extends CommonObject
 	 *	@param    	string	$desc					Line description
 	 *	@param      date	$date_intervention  	Intervention date
 	 *	@param      int		$duration            	Intervention duration
+	 *  @param		array	$array_option			Array option
 	 *	@return    	int             				>0 if ok, <0 if ko
 	 */
-	function addline($user,$fichinterid, $desc, $date_intervention, $duration)
+	function addline($user,$fichinterid, $desc, $date_intervention, $duration, $array_option='')
 	{
-		dol_syslog("Fichinter::Addline $fichinterid, $desc, $date_intervention, $duration");
+		dol_syslog(get_class($this)."::addline $fichinterid, $desc, $date_intervention, $duration");
 
 		if ($this->statut == 0)
 		{
@@ -895,8 +884,13 @@ class Fichinter extends CommonObject
 			$line->datei        = $date_intervention;
 			$line->duration     = $duration;
 
+			if (is_array($array_option) && count($array_option)>0) {
+				$line->array_options=$array_option;
+			}
+
 			$result=$line->insert($user);
-			if ($result > 0)
+
+			if ($result >= 0)
 			{
 				$this->db->commit();
 				return 1;
@@ -958,7 +952,7 @@ class Fichinter extends CommonObject
 	{
 		$sql = 'SELECT rowid, description, duree, date, rang';
 		$sql.= ' FROM '.MAIN_DB_PREFIX.'fichinterdet';
-		$sql.= ' WHERE fk_fichinter = '.$this->id;
+		$sql.=' WHERE fk_fichinter = '.$this->id .' ORDER BY rang ASC' ;
 
 		dol_syslog(get_class($this)."::fetch_lines", LOG_DEBUG);
 		$resql=$this->db->query($sql);
@@ -998,7 +992,7 @@ class Fichinter extends CommonObject
 /**
  *	Classe permettant la gestion des lignes d'intervention
  */
-class FichinterLigne
+class FichinterLigne extends CommonObjectLine
 {
 	var $db;
 	var $error;
@@ -1011,6 +1005,9 @@ class FichinterLigne
 	var $duration;        // Duree de l'intervention
 	var $rang = 0;
 
+	public $element='fichinterdet';
+	public $table_element='fichinterdet';
+	public $fk_element='fk_fichinter';
 
 	/**
 	 *	Constructor
@@ -1041,6 +1038,7 @@ class FichinterLigne
 		{
 			$objp = $this->db->fetch_object($result);
 			$this->rowid          	= $objp->rowid;
+			$this->id 				= $objp->rowid;
 			$this->fk_fichinter   	= $objp->fk_fichinter;
 			$this->datei			= $this->db->jdate($objp->datei);
 			$this->desc           	= $objp->description;
@@ -1106,7 +1104,21 @@ class FichinterLigne
 		$resql=$this->db->query($sql);
 		if ($resql)
 		{
+			$this->rowid=$this->db->last_insert_id(MAIN_DB_PREFIX.'fichinterdet');
+
+			if (empty($conf->global->MAIN_EXTRAFIELDS_DISABLED)) // For avoid conflicts if trigger used
+            {
+            	$this->id=$this->rowid;
+            	$result=$this->insertExtraFields();
+            	if ($result < 0)
+            	{
+            		$error++;
+            	}
+            }
+
+
 			$result=$this->update_total();
+
 			if ($result > 0)
 			{
 				$this->rang=$rangToUse;
@@ -1164,6 +1176,17 @@ class FichinterLigne
 		$resql=$this->db->query($sql);
 		if ($resql)
 		{
+
+			if (empty($conf->global->MAIN_EXTRAFIELDS_DISABLED)) // For avoid conflicts if trigger used
+        	{
+        		$this->id=$this->rowid;
+        		$result=$this->insertExtraFields();
+        		if ($result < 0)
+        		{
+        			$error++;
+        		}
+        	}
+
 			$result=$this->update_total();
 			if ($result > 0)
 			{

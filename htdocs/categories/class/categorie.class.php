@@ -87,7 +87,7 @@ class Categorie extends CommonObject
 
 		else
 		{
-			if ($label) $sql.= " WHERE label = '".$this->db->escape($label)."' AND entity=".$conf->entity;;
+			if ($label) $sql.= " WHERE label = '".$this->db->escape($label)."' AND entity IN (".getEntity('category',1).")";
 		}
 
 		dol_syslog(get_class($this)."::fetch", LOG_DEBUG);
@@ -137,7 +137,7 @@ class Categorie extends CommonObject
 	 *          					-3 : categorie invalide
 	 * 								-4 : category already exists
 	 */
-	function create($user='')
+	function create($user)
 	{
 		global $conf,$langs,$hookmanager;
 		$langs->load('categories');

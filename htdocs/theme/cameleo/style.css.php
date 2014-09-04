@@ -651,6 +651,9 @@ form#login {
 	background-image: -ms-linear-gradient(top, rgba(240,240,240,.3) 0%, rgba(192,192,192,.3) 100%);
 	background-image: linear-gradient(top, rgba(240,240,240,.3) 0%, rgba(192,192,192,.3) 100%);
 }
+#securitycode {
+	min-width: 60px;
+}
 #img_securitycode {
 	border: 1px solid #DDDDDD;
 }
@@ -860,6 +863,7 @@ div.blockvmenusearch div.menu_titre {
 #blockvmenusearch form
 {
 	clear: both;
+	margin-bottom: 14px;
 }
 
 div.blockvmenubookmarks
@@ -2377,7 +2381,11 @@ div.ecmjqft {
 {
 	text-decoration: underline !important;
 }
-
+.ui-state-disabled, .ui-widget-content .ui-state-disabled, .ui-widget-header .ui-state-disabled, .paginate_button_disabled {
+	opacity: .35;
+	filter: Alpha(Opacity=35);
+	background-image: none;
+}
 
 /* ============================================================================== */
 /*  JMobile                                                                       */
