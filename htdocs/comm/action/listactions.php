@@ -63,15 +63,15 @@ $limit = $conf->liste_limit;
 $offset = $limit * $page ;
 if (! $sortorder)
 {
-	$sortorder="ASC";
-	if ($status == 'todo') $sortorder="ASC";
-	if ($status == 'done') $sortorder="DESC";
+	$sortorder="DESC";
+	if ($status == 'todo') $sortorder="DESC";
+	//if ($status == 'done') $sortorder="DESC";
 }
 if (! $sortfield)
 {
-	$sortfield="a.percent";
+	$sortfield="a.datep";
 	if ($status == 'todo') $sortfield="a.datep";
-	if ($status == 'done') $sortfield="a.datep2";
+	//if ($status == 'done') $sortfield="a.datep2";
 }
 
 // Security check
@@ -263,7 +263,7 @@ if ($resql)
 
 		// Start date
 		print '<td align="center" class="nowrap">';
-		print dol_print_date($db->jdate($obj->dp),"day");
+		print dol_print_date($db->jdate($obj->dp),"dayhour");
 		$late=0;
 		if ($obj->percent == 0 && $obj->dp && $db->jdate($obj->dp) < ($now - $delay_warning)) $late=1;
 		if ($obj->percent == 0 && ! $obj->dp && $obj->dp2 && $db->jdate($obj->dp) < ($now - $delay_warning)) $late=1;
@@ -274,7 +274,7 @@ if ($resql)
 
 		// End date
 		print '<td align="center" class="nowrap">';
-		print dol_print_date($db->jdate($obj->dp2),"day");
+		print dol_print_date($db->jdate($obj->dp2),"dayhour");
 		print '</td>';
 
 		// Third party

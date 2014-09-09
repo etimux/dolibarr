@@ -76,24 +76,12 @@ if ($action == 'validate' && $user->rights->deplacement->creer)
     }
 }
 
-/*
-else if ($action == 'unblock' && $user->rights->deplacement->unvalidate)
+else if ($action == 'classifyrefunded' && $user->rights->deplacement->creer)
 {
     $object->fetch($id);
-    if ($object->fk_statut == '1') 	// Not blocked...
+    if ($object->statut == 1)
     {
-        $mesg='<div class="error">'.$langs->trans("Error").'</div>';
-        $action='';
-        $error++;
-    }
-    else
-    {
-        $result = $object->fetch($id);
-
-        $object->fk_statut	= '1';
-
-        $result = $object->update($user);
-
+        $result = $object->setStatut(2);
         if ($result > 0)
         {
             header("Location: " . $_SERVER["PHP_SELF"] . "?id=" . $id);
@@ -101,10 +89,10 @@ else if ($action == 'unblock' && $user->rights->deplacement->unvalidate)
         }
         else
         {
-            $mesg=$object->error;
+	        setEventMessage($object->error, 'errors');
         }
     }
-}*/
+}
 
 else if ($action == 'confirm_delete' && $confirm == "yes" && $user->rights->deplacement->supprimer)
 {
@@ -291,19 +279,19 @@ if ($action == 'create')
     print '<td class="border" valign="top">'.$langs->trans('NotePublic').'</td>';
     print '<td valign="top" colspan="2">';
 
-    $doleditor = new DolEditor('note_public', GETPOST('note_public', 'alpha'), 600, 200, 'dolibarr_notes', 'In', false, true, true, ROWS_8, 100);
+    $doleditor = new DolEditor('note_public', GETPOST('note_public', 'alpha'), '', 200, 'dolibarr_notes', 'In', false, true, true, ROWS_8, 100);
     print $doleditor->Create(1);
 
     print '</td></tr>';
 
     // Private note
-    if (! $user->societe_id)
+    if (empty($user->societe_id))
     {
         print '<tr>';
         print '<td class="border" valign="top">'.$langs->trans('NotePrivate').'</td>';
         print '<td valign="top" colspan="2">';
 
-        $doleditor = new DolEditor('note_private', GETPOST('note_private', 'alpha'), 600, 200, 'dolibarr_notes', 'In', false, true, true, ROWS_8, 100);
+        $doleditor = new DolEditor('note_private', GETPOST('note_private', 'alpha'), '', 200, 'dolibarr_notes', 'In', false, true, true, ROWS_8, 100);
         print $doleditor->Create(1);
 
         print '</td></tr>';
@@ -385,18 +373,18 @@ else if ($id)
             print '<tr><td valign="top">'.$langs->trans("NotePublic").'</td>';
             print '<td valign="top" colspan="3">';
 
-            $doleditor = new DolEditor('note_public', $object->note_public, 600, 200, 'dolibarr_notes', 'In', false, true, true, ROWS_8, '100');
+            $doleditor = new DolEditor('note_public', $object->note_public, '', 200, 'dolibarr_notes', 'In', false, true, true, ROWS_8, '100');
             print $doleditor->Create(1);
 
             print "</td></tr>";
 
             // Private note
-            if (! $user->societe_id)
+            if (empty($user->societe_id))
             {
                 print '<tr><td valign="top">'.$langs->trans("NotePrivate").'</td>';
                 print '<td valign="top" colspan="3">';
 
-                $doleditor = new DolEditor('note_private', $object->note_private, 600, 200, 'dolibarr_notes', 'In', false, true, true, ROWS_8, '100');
+                $doleditor = new DolEditor('note_private', $object->note_private, '', 200, 'dolibarr_notes', 'In', false, true, true, ROWS_8, '100');
                 print $doleditor->Create(1);
 
                 print "</td></tr>";
@@ -521,11 +509,23 @@ else if ($id)
 
             /*
              * Barre d'actions
-            */
+             */
 
             print '<div class="tabsAction">';
 
-            if ($object->statut == 0) 	// if blocked...
+            if ($object->statut < 2) 	// if not refunded
+            {
+	            if ($user->rights->deplacement->creer)
+	            {
+	                print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?action=edit&id='.$id.'">'.$langs->trans('Modify').'</a>';
+	            }
+	            else
+	            {
+	                print '<a class="butActionRefused" href="#" title="'.dol_escape_htmltag($langs->trans("NotAllowed")).'">'.$langs->trans('Modify').'</a>';
+	            }
+            }
+
+            if ($object->statut == 0) 	// if draft
             {
                 if ($user->rights->deplacement->creer)
                 {
@@ -537,14 +537,18 @@ else if ($id)
                 }
             }
 
-            if ($user->rights->deplacement->creer)
+            if ($object->statut == 1) 	// if validated
             {
-                print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?action=edit&id='.$id.'">'.$langs->trans('Modify').'</a>';
+                if ($user->rights->deplacement->creer)
+                {
+                    print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?action=classifyrefunded&id='.$id.'">'.$langs->trans('ClassifyRefunded').'</a>';
+                }
+                else
+                {
+                    print '<a class="butActionRefused" href="#" title="'.dol_escape_htmltag($langs->trans("NotAllowed")).'">'.$langs->trans('ClassifyRefunded').'</a>';
+                }
             }
-            else
-            {
-                print '<a class="butActionRefused" href="#" title="'.dol_escape_htmltag($langs->trans("NotAllowed")).'">'.$langs->trans('Modify').'</a>';
-            }
+
             if ($user->rights->deplacement->supprimer)
             {
                 print '<a class="butActionDelete" href="'.$_SERVER["PHP_SELF"].'?action=delete&id='.$id.'">'.$langs->trans('Delete').'</a>';
@@ -567,4 +571,3 @@ else if ($id)
 llxFooter();
 
 $db->close();
-?>
