@@ -1685,15 +1685,15 @@ class Societe extends CommonObject
 
         if ($option == 'customer' || $option == 'compta')
         {
-           $lien = '<a href="'.DOL_URL_ROOT.'/comm/fiche.php?socid='.$this->id;
+           $lien = '<a href="'.DOL_URL_ROOT.'/comm/card.php?socid='.$this->id;
         }
         else if ($option == 'prospect' && empty($conf->global->SOCIETE_DISABLE_PROSPECTS))
         {
-            $lien = '<a href="'.DOL_URL_ROOT.'/comm/fiche.php?socid='.$this->id;
+            $lien = '<a href="'.DOL_URL_ROOT.'/comm/card.php?socid='.$this->id;
         }
         else if ($option == 'supplier')
         {
-            $lien = '<a href="'.DOL_URL_ROOT.'/fourn/fiche.php?socid='.$this->id;
+            $lien = '<a href="'.DOL_URL_ROOT.'/fourn/card.php?socid='.$this->id;
         }
         else if ($option == 'category')
         {
@@ -1840,12 +1840,18 @@ class Societe extends CommonObject
             $nump = $this->db->num_rows($resql);
             if ($nump)
             {
+            	$sepa="("; $sepb=")";
+            	if ($mode == 'email')
+            	{
+            		$sepa="&lt;"; $sepb="&gt;";
+            	}
                 $i = 0;
                 while ($i < $nump)
                 {
                     $obj = $this->db->fetch_object($resql);
                     if ($mode == 'email') $property=$obj->email;
                     else if ($mode == 'mobile') $property=$obj->phone_mobile;
+                    else $property=$obj->$mode;
 
 					// Show all contact. If hidedisabled is 1, showonly contacts with status = 1
                     if ($obj->statut == 1 || empty($hidedisabled))
@@ -1858,11 +1864,11 @@ class Societe extends CommonObject
 
 	                    if (!empty($obj->poste))
     	                {
-							$contact_property[$obj->rowid] = trim(dolGetFirstLastname($obj->firstname,$obj->lastname))."(".$obj->poste.")"." &lt;".$property."&gt;";
+							$contact_property[$obj->rowid] = trim(dolGetFirstLastname($obj->firstname,$obj->lastname)).($obj->poste?" - ".$obj->poste:"").(($mode != 'poste' && $property)?" ".$sepa.$property.$sepb:'');
 						}
 						else
 						{
-							$contact_property[$obj->rowid] = trim(dolGetFirstLastname($obj->firstname,$obj->lastname))." &lt;".$property."&gt;";
+							$contact_property[$obj->rowid] = trim(dolGetFirstLastname($obj->firstname,$obj->lastname)).(($mode != 'poste' && $property)?" ".$sepa.$property.$sepb:'');
 						}
                     }
                     $i++;

@@ -30,7 +30,7 @@ $langs->load("companies");
 if (! empty($conf->facture->enabled)) $langs->load("bills");
 
 // Security check
-$socid = $_GET["socid"];
+$socid = GETPOST("socid",'int');
 if ($user->societe_id > 0)
 {
   $action = '';
@@ -181,7 +181,7 @@ if ($socid > 0)
 						print '<td align="center">'.dol_print_date($db->jdate($objp->dp),'day')."</td>\n";
 						print '<td>';
 						print '&nbsp; &nbsp; &nbsp; '; // Decalage
-						print '<a href="paiement/fiche.php?id='.$objp->rowid.'">'.img_object($langs->trans("ShowPayment"),"payment").' '.$langs->trans("Payment").' '.$objp->rowid.'</td>';
+						print '<a href="paiement/card.php?id='.$objp->rowid.'">'.img_object($langs->trans("ShowPayment"),"payment").' '.$langs->trans("Payment").' '.$objp->rowid.'</td>';
 						print "<td>&nbsp;</td>\n";
 						print "<td>&nbsp;</td>\n";
 						print '<td align="right">'.price($objp->amount).'</td>';

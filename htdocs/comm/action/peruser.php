@@ -209,7 +209,6 @@ if ($type)   $param.="&type=".$type;
 if ($action == 'show_day' || $action == 'show_week' || $action == 'show_month' || $action != 'show_peruser') $param.='&action='.$action;
 $param.="&maxprint=".$maxprint;
 
-
 $prev = dol_get_first_day_week($day, $month, $year);
 $prev_year  = $prev['prev_year'];
 $prev_month = $prev['prev_month'];
@@ -411,6 +410,8 @@ if ($resql)
         $event->location=$obj->location;
         $event->transparency=$obj->transparency;
 
+        $event->socid=$obj->fk_soc;
+        $event->contactid=$obj->fk_contact;
         $event->societe->id=$obj->fk_soc;
         $event->contact->id=$obj->fk_contact;
 
@@ -657,7 +658,7 @@ jQuery(document).ready(function() {
 		if (ids == \'none\') /* No event */
 		{
 			/* alert(\'no event\'); */
-			url = "'.DOL_URL_ROOT.'/comm/action/fiche.php?action=create&affectedto="+userid+"&datep="+year+month+day+hour+min+"00"
+			url = "'.DOL_URL_ROOT.'/comm/action/card.php?action=create&assignedtouser="+userid+"&datep="+year+month+day+hour+min+"00&backtopage='.urlencode($_SERVER["PHP_SELF"].'?year='.$year.'&month='.$month.'&day='.$day).'"
 			window.location.href = url;
 		}
 		else if (ids.indexOf(",") > -1)	/* There is several events */
@@ -669,7 +670,7 @@ jQuery(document).ready(function() {
 		else	/* One event */
 		{
 			/* alert(\'one event\'); */
-			url = "'.DOL_URL_ROOT.'/comm/action/fiche.php?action=view&id="+ids
+			url = "'.DOL_URL_ROOT.'/comm/action/card.php?action=view&id="+ids
 			window.location.href = url;
 		}
 	});
@@ -685,21 +686,22 @@ $db->close();
 
 
 
-
 /**
  * Show event of a particular day
  *
- * @param   int		$day             Day
- * @param   int		$month           Month
- * @param   int		$year            Year
- * @param   int		$monthshown      Current month shown in calendar view
- * @param   string	$style           Style to use for this day
- * @param   array	&$eventarray     Array of events
- * @param   int		$maxprint        Nb of actions to show each day on month view (0 means no limit)
- * @param   int		$maxnbofchar     Nb of characters to show for event line
- * @param   string	$newparam        Parameters on current URL
- * @param   int		$showinfo        Add extended information (used by day view)
- * @param   int		$minheight       Minimum height for each event. 60px by default.
+ * @param	string	$username		Login
+ * @param   int		$day            Day
+ * @param   int		$month          Month
+ * @param   int		$year           Year
+ * @param   int		$monthshown     Current month shown in calendar view
+ * @param   string	$style          Style to use for this day
+ * @param   array	&$eventarray    Array of events
+ * @param   int		$maxprint       Nb of actions to show each day on month view (0 means no limit)
+ * @param   int		$maxnbofchar    Nb of characters to show for event line
+ * @param   string	$newparam       Parameters on current URL
+ * @param   int		$showinfo       Add extended information (used by day view)
+ * @param   int		$minheight      Minimum height for each event. 60px by default.
+ * @param	boolean	$showheader		Show header
  * @return	void
  */
 function show_day_events2($username, $day, $month, $year, $monthshown, $style, &$eventarray, $maxprint=0, $maxnbofchar=16, $newparam='', $showinfo=0, $minheight=60, $showheader=false)
@@ -779,7 +781,7 @@ function show_day_events2($username, $day, $month, $year, $monthshown, $style, &
 				}
 				//$cssclass=$cssclass.' '.$cssclass.'_day_'.$ymd;
 
-				// Show rect of event
+				// Define all rects with event (cases1 is first half hour, cases2 is second half hour)
 				for ($h = $begin_h; $h < $end_h; $h++)
 				{
 					$color = ''; //init
@@ -797,12 +799,22 @@ function show_day_events2($username, $day, $month, $year, $monthshown, $style, &
 							$busy=$event->transparency;
 							$cases1[$h][$event->id]['busy']=$busy;
 							$cases1[$h][$event->id]['string']=dol_print_date($event->date_start_in_calendar,'dayhour').' - '.dol_print_date($event->date_end_in_calendar,'dayhour').' - '.$event->label;
+							$cases1[$h][$event->id]['typecode']=$event->type_code;
+							if ($event->socid)
+							{
+								$cases1[$h][$event->id]['string'].='xxx';
+							}
 						}
 						if ($event->date_start_in_calendar < $c && $dateendtouse > $b)
 						{
 							$busy=$event->transparency;
 							$cases2[$h][$event->id]['busy']=$busy;
 							$cases2[$h][$event->id]['string']=dol_print_date($event->date_start_in_calendar,'dayhour').' - '.dol_print_date($event->date_end_in_calendar,'dayhour').' - '.$event->label;
+							$cases1[$h][$event->id]['typecode']=$event->type_code;
+							if ($event->socid)
+							{
+								$cases2[$h][$event->id]['string'].='xxx';
+							}
 						}
 					}
 					else
@@ -812,6 +824,8 @@ function show_day_events2($username, $day, $month, $year, $monthshown, $style, &
 						$cases2[$h][$event->id]['busy']=$busy;
 						$cases1[$h][$event->id]['string']=$event->label;
 						$cases2[$h][$event->id]['string']=$event->label;
+						$cases1[$h][$event->id]['typecode']=$event->type_code;
+						$cases2[$h][$event->id]['typecode']=$event->type_code;
 						break;
 					}
 				}

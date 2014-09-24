@@ -11,15 +11,14 @@ MenuTools=Outils
 
 ConfigAccountingExpert=Configuration du module comptabilité expert
 Journaux=Journaux
+JournalFinancial=Journaux de trésorerie
 Exports=Exports
-About=A propos
-Contributors=Contributeurs
-Investors=Investisseurs
 Modelcsv=Modèle d'export
 Selectmodelcsv=Sélectionnez un modèle d'export
 Modelcsv_normal=Export classique
 Modelcsv_CEGID=Export vers CEGID Expert
 BackToChartofaccounts=Retour plan comptable
+Back=Retour
 
 Definechartofaccounts=Définir un plan comptable
 Selectchartofaccounts=Sélectionnez un plan comptable
@@ -46,9 +45,9 @@ WriteBookKeeping=Comptabiliser les écritures dans le grand livre
 Bookkeeping=Grand livre
 AccountBalanceByMonth=Balance mensuelle
 
-VentilationComptable=Ventilation comptable
-VentilationComptableSupplier=Ventilation comptable fournisseur
-Intitule=Intitulé
+AccountingVentilation=Ventilation comptable
+AccountingVentilationSupplier=Ventilation comptable fournisseur
+AccountingVentilationCustomer=Ventilation comptable client
 Line=Ligne
 
 CAHTF=Total achat fournisseur HT
@@ -88,10 +87,10 @@ ACCOUNTING_SOCIAL_JOURNAL=Journal Social
 ACCOUNTING_ACCOUNT_TRANSFER_CASH=Compte de transfert espèce
 ACCOUNTING_ACCOUNT_SUSPENSE=Compte d'attente
 
-COMPTA_PRODUCT_BUY_ACCOUNT=Compte comptable par défaut pour les produits achetés (si non défini dans la fiche produit)
-COMPTA_PRODUCT_SOLD_ACCOUNT=Compte comptable par défaut pour les produits vendus (si non défini dans la fiche produit)
-COMPTA_SERVICE_BUY_ACCOUNT=Compte comptable par défaut pour les services achetés (si non défini dans la fiche service)
-COMPTA_SERVICE_SOLD_ACCOUNT=Compte comptable par défaut pour les services vendus (si non défini dans la fiche service)
+ACCOUNTING_PRODUCT_BUY_ACCOUNT=Compte comptable par défaut pour les produits achetés (si non défini dans la fiche produit)
+ACCOUNTING_PRODUCT_SOLD_ACCOUNT=Compte comptable par défaut pour les produits vendus (si non défini dans la fiche produit)
+ACCOUNTING_SERVICE_BUY_ACCOUNT=Compte comptable par défaut pour les services achetés (si non défini dans la fiche service)
+ACCOUNTING_SERVICE_SOLD_ACCOUNT=Compte comptable par défaut pour les services vendus (si non défini dans la fiche service)
 
 Doctype=Type de document
 Docdate=Date
@@ -123,6 +122,7 @@ CustomerInvoicePayment=Règlement de facture client
 
 ThirdPartyAccount=Compte tiers
 
+NewAccountingMvt=Nouveau mouvement
 NumMvts=Numéro de mouvement
 ListeMvts=Liste du mouvement
 ErrorDebitCredit=Debit et Credit ne peuvent avoir une valeur en même temps

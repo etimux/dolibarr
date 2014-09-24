@@ -109,8 +109,8 @@ if ($action == 'add_paiement' || ($action == 'confirm_paiement' && $confirm=='ye
 	            if ($datepaye && ($datepaye < $tmpinvoice->date))
 	            {
 	            	$langs->load("errors");
-	                $error++;
-	                setEventMessage($langs->transnoentities("ErrorPaymentDateLowerThanInvoiceDate", dol_print_date($datepaye,'day'), dol_print_date($tmpinvoice->date, 'day'), $tmpinvoice->ref), 'errors');
+	                //$error++;
+	                setEventMessage($langs->transnoentities("WarningPaymentDateLowerThanInvoiceDate", dol_print_date($datepaye,'day'), dol_print_date($tmpinvoice->date, 'day'), $tmpinvoice->ref), 'warnings');
 	            }
             }
 
@@ -237,7 +237,7 @@ if ($action == 'confirm_paiement' && $confirm == 'yes')
             }
         }
         if ($invoiceid > 0) $loc = DOL_URL_ROOT.'/compta/facture.php?facid='.$invoiceid;
-        else $loc = DOL_URL_ROOT.'/compta/paiement/fiche.php?id='.$paiement_id;
+        else $loc = DOL_URL_ROOT.'/compta/paiement/card.php?id='.$paiement_id;
         header('Location: '.$loc);
         exit;
     }
@@ -686,13 +686,13 @@ if (! GETPOST('action'))
         $i = 0;
         $var=True;
 
-        print_barre_liste($langs->trans('Payments'), $page, 'paiement.php','',$sortfield,$sortorder,'',$num);
+        print_barre_liste($langs->trans('Payments'), $page, $_SERVER["PHP_SELF"],'',$sortfield,$sortorder,'',$num);
         print '<table class="noborder" width="100%">';
         print '<tr class="liste_titre">';
-        print_liste_field_titre($langs->trans('Invoice'),'paiement.php','facnumber','','','',$sortfield,$sortorder);
-        print_liste_field_titre($langs->trans('Date'),'paiement.php','dp','','','',$sortfield,$sortorder);
-        print_liste_field_titre($langs->trans('Type'),'paiement.php','libelle','','','',$sortfield,$sortorder);
-        print_liste_field_titre($langs->trans('Amount'),'paiement.php','fa_amount','','','align="right"',$sortfield,$sortorder);
+        print_liste_field_titre($langs->trans('Invoice'),$_SERVER["PHP_SELF"],'facnumber','','','',$sortfield,$sortorder);
+        print_liste_field_titre($langs->trans('Date'),$_SERVER["PHP_SELF"],'dp','','','',$sortfield,$sortorder);
+        print_liste_field_titre($langs->trans('Type'),$_SERVER["PHP_SELF"],'libelle','','','',$sortfield,$sortorder);
+        print_liste_field_titre($langs->trans('Amount'),$_SERVER["PHP_SELF"],'fa_amount','','','align="right"',$sortfield,$sortorder);
         print '<td>&nbsp;</td>';
         print "</tr>\n";
 

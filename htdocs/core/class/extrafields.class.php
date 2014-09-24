@@ -514,7 +514,7 @@ class ExtraFields
 
 
 	/**
-	 * 	Load array this->attribute_label
+	 * 	Load array this->attribute_xxx like attribute_label, attribute_type, ...
 	 *
 	 * 	@param	string		$elementtype		Type of element ('adherent', 'commande', societe', 'facture', 'propal', 'product', ...)
 	 * 	@param	boolean		$forceload			Force load of extra fields whatever is option MAIN_EXTRAFIELDS_DISABLED
@@ -975,7 +975,7 @@ class ExtraFields
 				// Several field into label (eq table:code|libelle:rowid)
 				$fields_label = explode('|',$InfoFieldList[1]);
 
-				if(is_array($fields_label))
+				if(is_array($fields_label) && count($fields_label)>1)
 				{
 					foreach ($fields_label as $field_toshow)
 					{

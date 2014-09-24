@@ -1,7 +1,8 @@
 <?php
 /* Copyright (C) 2013      Olivier Geffroy		<jeff@jeffinfo.com>
  * Copyright (C) 2013-2014 Florian Henry		<florian.henry@open-concept.pro>
- * Copyright (C) 2013-2014 Alexandre Spangaro	<alexandre.spangaro@gmail.com> 
+ * Copyright (C) 2013-2014 Alexandre Spangaro	<alexandre.spangaro@gmail.com>
+ * Copyright (C) 2014	   Juanjo Menent		<jmenent@2byte.es> 
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,6 +29,7 @@ require '../../main.inc.php';
 	
 // Class
 require_once DOL_DOCUMENT_ROOT.'/core/lib/date.lib.php';
+require_once DOL_DOCUMENT_ROOT.'/core/lib/accounting.lib.php';
 
 // Langs
 $langs->load("compta");
@@ -39,7 +41,7 @@ $langs->load("accountancy");
 // Security check
 if ($user->societe_id > 0)
 	accessforbidden();
-if (! $user->rights->accounting->access)
+if (! $user->rights->accounting->ventilation->read)
 	accessforbidden();
 	
 // Filter
@@ -118,7 +120,7 @@ $var = true;
 
 print '<table class="noborder" width="100%">';
 print '<tr class="liste_titre"><td width="200">' . $langs->trans("Account") . '</td>';
-print '<td width="200" align="left">' . $langs->trans("Intitule") . '</td>';
+print '<td width="200" align="left">' . $langs->trans("Label") . '</td>';
 print '<td width="60" align="center">' . $langs->trans("JanuaryMin") . '</td>';
 print '<td width="60" align="center">' . $langs->trans("FebruaryMin") . '</td>';
 print '<td width="60" align="center">' . $langs->trans("MarchMin") . '</td>';
@@ -169,7 +171,7 @@ if ($resql) {
 	while ( $i < $num ) {
 		$row = $db->fetch_row($resql);
 		
-		print '<tr><td>' . $row[0] . '</td>';
+		print '<tr><td>' . length_accountg($row[0]) . '</td>';
 		print '<td align="left">' . $row[1] . '</td>';
 		print '<td align="right">' . price($row[2]) . '</td>';
 		print '<td align="right">' . price($row[3]) . '</td>';

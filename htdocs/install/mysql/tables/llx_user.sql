@@ -56,7 +56,6 @@ create table llx_user
   fk_socpeople      integer,
   fk_member         integer,
   fk_user           integer,               -- Hierarchic parent
-  thm				double(24,8),
   note              text DEFAULT NULL,
   datelastlogin     datetime,
   datepreviouslogin datetime,
@@ -71,5 +70,9 @@ create table llx_user
   fk_barcode_type	integer      DEFAULT 0,
   accountancy_code  varchar(32) NULL,
   nb_holiday		integer DEFAULT 0,
-  salary			double(24,8)
+  thm				double(24,8),
+  tjm				double(24,8),
+  salary			double(24,8),
+  salaryextra		double(24,8),
+  weeklyhours		double(16,8)
 )ENGINE=innodb;

@@ -72,13 +72,8 @@ $sproduct = GETPOST('sproduct', 'int');
 $sortorder = GETPOST('sortorder', 'alpha');
 $sortfield = GETPOST('sortfield', 'alpha');
 
-if (!$sortorder) {
-    $sortorder = 'DESC';
-}
-
-if (!$sortfield) {
-    $sortfield = 'cf.date_creation';
-}
+if (!$sortorder) $sortorder = 'DESC';
+if (!$sortfield) $sortfield = 'cf.date_creation';
 
 $offset = $conf->liste_limit * $page ;
 
@@ -146,7 +141,7 @@ if (GETPOST('statut', 'int')) {
 }
 $sql .= ' GROUP BY cf.rowid, cf.ref, cf.date_creation, cf.fk_statut';
 $sql .= ', cf.total_ttc, cf.fk_user_author, u.login, s.rowid, s.nom';
-$sql .= ' ORDER BY ' . $sortfield . ' ' . $sortorder  . ' ';
+$sql .= $db->order($sortfield, $sortorder);
 $sql .= $db->plimit($conf->liste_limit+1, $offset);
 $resql = $db->query($sql);
 if ($resql)
@@ -265,7 +260,7 @@ if ($resql)
         $var = !$var;
         if (!dispatched($obj->rowid) && (!$sproduct || in_array($sproduct, getProducts($obj->rowid))))
         {
-            $href = DOL_URL_ROOT . '/fourn/commande/fiche.php?id=' . $obj->rowid;
+            $href = DOL_URL_ROOT . '/fourn/commande/card.php?id=' . $obj->rowid;
             print '<tr ' . $bc[$var] . '>'.
             // Ref
                  '<td>'.
@@ -274,7 +269,7 @@ if ($resql)
                  '</a></td>';
 
             // Company
-            $href = DOL_URL_ROOT . '/fourn/fiche.php?socid=' . $obj->socid;
+            $href = DOL_URL_ROOT . '/fourn/card.php?socid=' . $obj->socid;
             print '<td>'.
                  '<a href="' . $href .'">'.
                  img_object($langs->trans('ShowCompany'), 'company'). ' '.
@@ -317,7 +312,7 @@ if ($resql)
          '</form>';
 
     $db->free($resql);
-    
+
     dol_fiche_end();
 }
 else

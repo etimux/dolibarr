@@ -3,6 +3,7 @@
  * Copyright (C) 2013-2014 Alexandre Spangaro	<alexandre.spangaro@gmail.com>
  * Copyright (C) 2014	   Florian Henry		<florian.henry@open-concept.pro>
  * Copyright (C) 2014      Marcos García        <marcosgdf@gmail.com>
+ * Copyright (C) 2014	   Juanjo Menent		<jmenent@2byte.es>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -86,7 +87,8 @@ llxHeader();
 
 $form = new Form($db);
 
-print_fiche_titre($langs->trans('ConfigAccountingExpert'));
+$linkback='<a href="'.DOL_URL_ROOT.'/admin/modules.php">'.$langs->trans("BackToModuleList").'</a>';
+print_fiche_titre($langs->trans('ConfigAccountingExpert'),$linkback,'setup');
 
 $head = admin_accounting_prepare_head(null);
 
@@ -129,9 +131,6 @@ print "<br>\n";
  *  Params
  *
  */
-$list = array (
-		'ACCOUNTING_SEPARATORCSV' 
-);
 
 $num = count($list);
 if ($num) {
