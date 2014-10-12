@@ -103,7 +103,7 @@ print_liste_field_titre($langs->trans("NbOfProjects"),"","","","",'align="right"
 print "</tr>\n";
 
 $sql = "SELECT count(p.rowid) as nb";
-$sql.= ", s.nom, s.rowid as socid";
+$sql.= ", s.nom as name, s.rowid as socid";
 $sql.= " FROM ".MAIN_DB_PREFIX."projet as p";
 $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s on p.fk_soc = s.rowid";
 $sql.= " WHERE p.entity = ".$conf->entity;
@@ -127,7 +127,7 @@ if ( $resql )
 		if ($obj->socid)
 		{
 			$socstatic->id=$obj->socid;
-			$socstatic->nom=$obj->nom;
+			$socstatic->name=$obj->name;
 			print $socstatic->getNomUrl(1);
 		}
 		else
@@ -166,7 +166,7 @@ $sql.= " WHERE p.entity = ".$conf->entity;
 if ($mine || ! $user->rights->projet->all->lire) $sql.= " AND p.rowid IN (".$projectsListId.")";
 if ($socid)	$sql.= "  AND (p.fk_soc IS NULL OR p.fk_soc = 0 OR p.fk_soc = ".$socid.")";
 $sql.= " AND p.fk_statut=1";
-$sql.= " GROUP BY p.title, p.rowid, t.label, t.rowid, u.rowid, t.planned_workload, t.dateo, t.datee";
+$sql.= " GROUP BY p.ref, p.title, p.rowid, t.label, t.rowid, u.rowid, t.planned_workload, t.dateo, t.datee";
 $sql.= " ORDER BY u.rowid, t.dateo, t.datee";
 
 $userstatic=new User($db);

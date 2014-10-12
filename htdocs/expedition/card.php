@@ -7,6 +7,7 @@
  * Copyright (C) 2013       Florian Henry		  	<florian.henry@open-concept.pro>
  * Copyright (C) 2013       Marcos García           <marcosgdf@gmail.com>
  * Copyright (C) 2014		Cedric GROSS			<c.gross@kreiz-it.fr>
+ * Copyright (C) 2014		Francis Appels			<francis.appels@yahoo.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,13 +82,14 @@ if ($id > 0 || ! empty($ref))
 }
 
 // Initialize technical object to manage hooks of thirdparties. Note that conf->hooks_modules contains array array
-$hookmanager->initHooks(array('expeditioncard'));
+$hookmanager->initHooks(array('expeditioncard','globalcard'));
 
 /*
  * Actions
  */
 $parameters=array();
 $reshook=$hookmanager->executeHooks('doActions',$parameters,$object,$action);    // Note that $action and $object may have been modified by some hooks
+if ($reshook < 0) setEventMessages($hookmanager->error, $hookmanager->errors, 'errors');
 
 if ($action == 'add')
 {
@@ -1432,6 +1434,18 @@ else if ($id || $ref)
 					$entrepot = new Entrepot($db);
 					$entrepot->fetch($lines[$i]->entrepot_id);
 					print $entrepot->getNomUrl(1);
+				} 
+				else if (count($lines[$i]->details_entrepot) > 1)
+				{
+					$detail = '';
+					foreach ($lines[$i]->details_entrepot as $detail_entrepot) {
+						if ($detail_entrepot->entrepot_id > 0) {
+							$entrepot = new Entrepot($db);
+							$entrepot->fetch($detail_entrepot->entrepot_id);
+							$detail.= $langs->trans("DetailWarehouseFormat",$entrepot->libelle,$detail_entrepot->qty_shipped).'<br/>';
+						}
+					}
+					print $form->textwithtooltip($langs->trans("DetailWarehouseNumber"),$detail);
 				}
 				print '</td>';
 			}
@@ -1525,7 +1539,7 @@ else if ($id || $ref)
 				print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&amp;action=classifybilled">'.$langs->trans($label).'</a>';
 			}
 		}
-
+        
 		if ($user->rights->expedition->supprimer)
 		{
 			print '<a class="butActionDelete" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&amp;action=delete">'.$langs->trans("Delete").'</a>';

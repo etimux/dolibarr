@@ -68,7 +68,7 @@ if (! $sortorder) $sortorder="ASC";
 if (! $sortfield) $sortfield="nom";
 
 // Initialize technical object to manage hooks of thirdparties. Note that conf->hooks_modules contains array array
-$hookmanager->initHooks(array('commcard'));
+$hookmanager->initHooks(array('commcard','globalcard'));
 
 $object = new Societe($db);
 
@@ -78,6 +78,7 @@ $object = new Societe($db);
 
 $parameters = array('socid' => $id);
 $reshook = $hookmanager->executeHooks('doActions', $parameters, $object, $action); // Note that $action and $object may have been modified by some
+if ($reshook < 0) setEventMessages($hookmanager->error, $hookmanager->errors, 'errors');
 
 
 if ($action == 'setcustomeraccountancycode')

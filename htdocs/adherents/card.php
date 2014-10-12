@@ -108,7 +108,7 @@ if ($rowid)
 }
 
 // Initialize technical object to manage hooks of thirdparties. Note that conf->hooks_modules contains array array
-$hookmanager->initHooks(array('membercard'));
+$hookmanager->initHooks(array('membercard','globalcard'));
 
 
 /*
@@ -117,6 +117,7 @@ $hookmanager->initHooks(array('membercard'));
 
 $parameters=array('rowid'=>$rowid, 'objcanvas'=>$objcanvas);
 $reshook=$hookmanager->executeHooks('doActions',$parameters,$object,$action);    // Note that $action and $object may have been modified by some hooks
+if ($reshook < 0) setEventMessages($hookmanager->error, $hookmanager->errors, 'errors');
 
 if ($action == 'setuserid' && ($user->rights->user->self->creer || $user->rights->user->user->creer))
 {
@@ -459,7 +460,7 @@ if ($action == 'add' && $user->rights->adherent->creer)
 	$object->email       = $email;
 	$object->login       = $login;
 	$object->pass        = $pass;
-	$object->naiss       = $birthdate;
+	$object->birth       = $birthdate;
 	$object->photo       = $photo;
 	$object->typeid      = $typeid;
 	//$object->note        = $comment;
@@ -882,7 +883,7 @@ else
 
 		// Birthday
 		print "<tr><td>".$langs->trans("Birthday")."</td><td>\n";
-		$form->select_date(($object->naiss ? $object->naiss : -1),'naiss','','',1,'formsoc');
+		$form->select_date(($object->birth ? $object->birth : -1),'birth','','',1,'formsoc');
 		print "</td></tr>\n";
 
 		// Profil public

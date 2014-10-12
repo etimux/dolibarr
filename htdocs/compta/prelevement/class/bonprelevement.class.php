@@ -3,6 +3,7 @@
  * Copyright (C) 2005-2012 Regis Houssin        <regis.houssin@capnetworks.com>
  * Copyright (C) 2010-2014 Juanjo Menent        <jmenent@2byte.es>
  * Copyright (C) 2010-2014 Laurent Destailleur  <eldy@users.sourceforge.net>
+ * Copyright (C) 2014 		Ferran Marcet       <fmarcet@2byte.es>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -164,7 +165,7 @@ class BonPrelevement extends CommonObject
     /**
      *	Add line to withdrawal
      *
-     *	@param	int		&$line_id 		id line to add
+     *	@param	int		$line_id 		id line to add
      *	@param	int		$client_id  	id invoice customer
      *	@param	string	$client_nom 	name of cliente
      *	@param	int		$amount 		amount of invoice
@@ -760,7 +761,7 @@ class BonPrelevement extends CommonObject
             $sql = "SELECT f.rowid, pfd.rowid as pfdrowid, f.fk_soc";
             $sql.= ", pfd.code_banque, pfd.code_guichet, pfd.number, pfd.cle_rib";
             $sql.= ", pfd.amount";
-            $sql.= ", s.nom";
+            $sql.= ", s.nom as name";
             $sql.= " FROM ".MAIN_DB_PREFIX."facture as f";
             $sql.= ", ".MAIN_DB_PREFIX."societe as s";
             $sql.= ", ".MAIN_DB_PREFIX."prelevement_facture_demande as pfd";
@@ -829,8 +830,8 @@ class BonPrelevement extends CommonObject
                             }
                             else
 							{
-								dol_syslog("Error on default bank number RIB/IBAN for thirdparty reported by verif() ".$fact->socid." ".$soc->nom, LOG_ERR);
-                                $facture_errors[$fac[0]]="Error on default bank number RIB/IBAN for thirdparty reported by function verif() ".$fact->socid." ".$soc->nom;
+								dol_syslog("Error on default bank number RIB/IBAN for thirdparty reported by verif() ".$fact->socid." ".$soc->name, LOG_ERR);
+                                $facture_errors[$fac[0]]="Error on default bank number RIB/IBAN for thirdparty reported by function verif() ".$fact->socid." ".$soc->name;
                             }
                         }
                         else
@@ -1262,7 +1263,7 @@ class BonPrelevement extends CommonObject
 			 * section Debiteur (sepa Debiteurs bloc lines)
 			 */
 			$sql = "SELECT soc.code_client as code, soc.address, soc.zip, soc.town, soc.datec, c.code as country_code,";
-			$sql.= " pl.client_nom as nom, pl.code_banque as cb, pl.code_guichet as cg, pl.number as cc, pl.amount as somme,";
+			$sql.= " pl.client_nom as name, pl.code_banque as cb, pl.code_guichet as cg, pl.number as cc, pl.amount as somme,";
 			$sql.= " f.facnumber as fac, pf.fk_facture as idfac, rib.iban_prefix as iban, rib.bic as bic, rib.rowid as drum";
 			$sql.= " FROM";
 			$sql.= " ".MAIN_DB_PREFIX."prelevement_lignes as pl,";
@@ -1286,7 +1287,7 @@ class BonPrelevement extends CommonObject
 				while ($i < $num)
 				{
 					$obj = $this->db->fetch_object($resql);
-					$fileDebiteurSection .= $this->EnregDestinataireSEPA($obj->code, $obj->nom, $obj->address, $obj->zip, $obj->town, $obj->country_code, $obj->cb, $obj->cg, $obj->cc, $obj->somme, $obj->facnumber, $obj->idfac, $obj->iban, $obj->bic, $obj->datec, $obj->drum);
+					$fileDebiteurSection .= $this->EnregDestinataireSEPA($obj->code, $obj->name, $obj->address, $obj->zip, $obj->town, $obj->country_code, $obj->cb, $obj->cg, $obj->cc, $obj->somme, $obj->facnumber, $obj->idfac, $obj->iban, $obj->bic, $obj->datec, $obj->drum);
 					$this->total = $this->total + $obj->somme;
 					$i++;
 				}
@@ -1342,7 +1343,7 @@ class BonPrelevement extends CommonObject
 			fputs($this->file, '	</CstmrDrctDbtInitn>'.$CrLf);
 			fputs($this->file, '</Document>'.$CrLf);
 
-			$sql = "SELECT pl.amount";
+			/*$sql = "SELECT pl.amount";
 			$sql.= " FROM";
 			$sql.= " ".MAIN_DB_PREFIX."prelevement_lignes as pl,";
 			$sql.= " ".MAIN_DB_PREFIX."facture as f,";
@@ -1368,7 +1369,7 @@ class BonPrelevement extends CommonObject
 			else
 			{
 				$result = -2;
-			}
+			}*/
 
         }
 
@@ -1490,7 +1491,7 @@ class BonPrelevement extends CommonObject
      *	Write recipient of request (customer)
      *
      *	@param	string		$row_code_client	soc.code_client as code,
-     *	@param	string		$row_nom			pl.client_nom AS nom,
+     *	@param	string		$row_nom			pl.client_nom AS name,
      *	@param	string		$row_address		soc.address AS adr,
      *	@param	string		$row_zip			soc.zip
      *  @param	string		$row_town			soc.town

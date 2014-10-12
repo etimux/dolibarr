@@ -77,7 +77,7 @@ if (! empty($canvas))
 $result = restrictedArea($user, 'societe', $socid, '&societe', '', 'fk_soc', 'rowid', $objcanvas);
 
 // Initialize technical object to manage hooks of thirdparties. Note that conf->hooks_modules contains array array
-$hookmanager->initHooks(array('thirdpartycard'));
+$hookmanager->initHooks(array('thirdpartycard','globalcard'));
 
 
 /*
@@ -86,7 +86,7 @@ $hookmanager->initHooks(array('thirdpartycard'));
 
 $parameters=array('id'=>$socid, 'objcanvas'=>$objcanvas);
 $reshook=$hookmanager->executeHooks('doActions',$parameters,$object,$action);    // Note that $action and $object may have been modified by some hooks
-$error=$hookmanager->error; $errors=array_merge($errors, (array) $hookmanager->errors);
+if ($reshook < 0) setEventMessages($hookmanager->error, $hookmanager->errors, 'errors');
 
 if (empty($reshook))
 {
@@ -2157,7 +2157,7 @@ else
 
 	        if (empty($conf->global->SOCIETE_DISABLE_BUILDDOC))
 	        {
-				print '<div class="fichecenter"><div class="fichethirdleft">';
+				print '<div class="fichecenter"><div class="fichehalfleft">';
 	            print '<a name="builddoc"></a>'; // ancre
 
 	            /*
@@ -2172,7 +2172,7 @@ else
 
 	            $somethingshown=$formfile->show_documents('company',$object->id,$filedir,$urlsource,$genallowed,$delallowed,'',0,0,0,28,0,'',0,'',$object->default_lang);
 
-				print '</div><div class="fichetwothirdright"><div class="ficheaddleft">';
+				print '</div><div class="fichehalfright"><div class="ficheaddleft">';
 
 
 				print '</div></div></div>';

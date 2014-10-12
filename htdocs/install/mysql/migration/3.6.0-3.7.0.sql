@@ -47,9 +47,9 @@ ALTER TABLE llx_user ADD COLUMN fk_user_modif integer AFTER fk_user_creat;
 
 -- Add module accounting Expert
 ALTER TABLE llx_bookkeeping RENAME TO llx_accounting_bookkeeping; -- To update old user of module Accounting Expert
- 
 
-CREATE TABLE llx_accounting_bookkeeping 
+
+CREATE TABLE llx_accounting_bookkeeping
 (
   rowid				integer NOT NULL AUTO_INCREMENT PRIMARY KEY,
   doc_date			date NOT NULL,
@@ -74,12 +74,12 @@ ALTER TABLE llx_c_paiement ADD COLUMN accountancy_code varchar(32) DEFAULT NULL 
 ALTER TABLE llx_bank_account ADD COLUMN accountancy_journal varchar(3) DEFAULT NULL AFTER account_number;
 
 ALTER TABLE llx_accountingaccount add column entity integer DEFAULT 1 NOT NULL AFTER rowid;
-ALTER TABLE llx_accountingaccount add column datec datetime NOT NULL AFTER entity;
+ALTER TABLE llx_accountingaccount add column datec datetime AFTER entity;
 ALTER TABLE llx_accountingaccount add column tms timestamp AFTER datec;
 ALTER TABLE llx_accountingaccount add column fk_user_author integer DEFAULT NULL AFTER label;
 ALTER TABLE llx_accountingaccount add column fk_user_modif integer DEFAULT NULL AFTER fk_user_author;
 
--- Qual 
+-- Qual
 UPDATE llx_const SET name = 'ACCOUNTING_MODE' WHERE name = 'COMPTA_MODE';
 UPDATE llx_const SET name = 'ACCOUNTING_ACCOUNT_CUSTOMER' WHERE name = 'COMPTA_ACCOUNT_CUSTOMER';
 UPDATE llx_const SET name = 'ACCOUNTING_ACCOUNT_SUPPLIER' WHERE name = 'COMPTA_ACCOUNT_SUPPLIER';
@@ -204,7 +204,7 @@ create table llx_accounting_fiscalyear
 )ENGINE=innodb;
 
 ALTER TABLE llx_contrat ADD COLUMN ref_ext varchar(30) after ref;
-ALTER TABLE llx_contrat ADD COLUMN ref_customer varchar(30) after ref_ext;
+ALTER TABLE llx_contrat ADD COLUMN ref_supplier varchar(30) after ref_ext;
 
 ALTER TABLE llx_propal ADD COLUMN fk_shipping_method integer AFTER date_livraison;
 ALTER TABLE llx_commande ADD COLUMN fk_shipping_method integer AFTER date_livraison;
@@ -1011,6 +1011,7 @@ create table llx_c_email_templates
   entity		  integer DEFAULT 1 NOT NULL,	  -- multi company id
   module          varchar(32),                    -- Nom du module en rapport avec le modele
   type_template   varchar(32),  				  -- template for which type of email (send invoice by email, send order, ...)
+  lang            varchar(6),
   private         smallint DEFAULT 0 NOT NULL,    -- Template public or private
   fk_user         integer,                        -- Id utilisateur si modele prive, sinon null
   datec           datetime,
@@ -1083,3 +1084,5 @@ CREATE TABLE llx_usergroup_extrafields (
 ) ENGINE=innodb;
 
 ALTER TABLE llx_usergroup_extrafields ADD INDEX idx_usergroup_extrafields (fk_object);
+
+ALTER TABLE llx_contrat ADD COLUMN model_pdf varchar(255) DEFAULT NULL AFTER note_public;

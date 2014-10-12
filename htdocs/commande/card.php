@@ -90,7 +90,7 @@ if ($id > 0 || ! empty($ref)) {
 }
 
 // Initialize technical object to manage hooks of thirdparties. Note that conf->hooks_modules contains array array
-$hookmanager->initHooks(array('ordercard'));
+$hookmanager->initHooks(array('ordercard','globalcard'));
 
 $permissionnote = $user->rights->commande->creer; // Used by the include of actions_setnotes.inc.php
 
@@ -100,6 +100,7 @@ $permissionnote = $user->rights->commande->creer; // Used by the include of acti
 
 $parameters = array('socid' => $socid);
 $reshook = $hookmanager->executeHooks('doActions', $parameters, $object, $action); // Note that $action and $object may have been modified by some hooks
+if ($reshook < 0) setEventMessages($hookmanager->error, $hookmanager->errors, 'errors');
 
 include DOL_DOCUMENT_ROOT . '/core/actions_setnotes.inc.php'; // Must be include, not includ_once
 
@@ -371,11 +372,11 @@ else if ($action == 'add' && $user->rights->commande->creer) {
 				// If some invoice's lines already known
 				$NBLINES = 8;
 				for($i = 1; $i <= $NBLINES; $i ++) {
-					if ($_POST ['idprod' . $i]) {
+					if ($_POST['idprod' . $i]) {
 						$xid = 'idprod' . $i;
 						$xqty = 'qty' . $i;
 						$xremise = 'remise_percent' . $i;
-						$object->add_product($_POST [$xid], $_POST [$xqty], $_POST [$xremise]);
+						$object->add_product($_POST[$xid], $_POST[$xqty], $_POST[$xremise]);
 					}
 				}
 			}
@@ -546,7 +547,7 @@ else if ($action == 'addline' && $user->rights->commande->creer) {
 	if (is_array($extralabelsline)) {
 		// Get extra fields
 		foreach ($extralabelsline as $key => $value) {
-			unset($_POST ["options_" . $key]);
+			unset($_POST["options_" . $key]);
 		}
 	}
 
@@ -599,10 +600,12 @@ else if ($action == 'addline' && $user->rights->commande->creer) {
 				// multiprix
 				if (! empty($conf->global->PRODUIT_MULTIPRICES) && ! empty($object->thirdparty->price_level))
 				{
-					$pu_ht = $prod->multiprices [$object->thirdparty->price_level];
-					$pu_ttc = $prod->multiprices_ttc [$object->thirdparty->price_level];
-					$price_min = $prod->multiprices_min [$object->thirdparty->price_level];
-					$price_base_type = $prod->multiprices_base_type [$object->thirdparty->price_level];
+					$pu_ht = $prod->multiprices[$object->thirdparty->price_level];
+					$pu_ttc = $prod->multiprices_ttc[$object->thirdparty->price_level];
+					$price_min = $prod->multiprices_min[$object->thirdparty->price_level];
+					$price_base_type = $prod->multiprices_base_type[$object->thirdparty->price_level];
+					if (isset($prod->multiprices_tva_tx[$object->client->price_level])) $tva_tx=$prod->multiprices_tva_tx[$object->client->price_level];
+					if (isset($prod->multiprices_recuperableonly[$object->client->price_level])) $tva_npr=$prod->multiprices_recuperableonly[$object->client->price_level];
 					$tva_tx=$prod->multiprices_tva_tx[$object->thirdparty->price_level];
 					$tva_npr=$prod->multiprices_recuperableonly[$object->thirdparty->price_level];
 				}
@@ -615,13 +618,19 @@ else if ($action == 'addline' && $user->rights->commande->creer) {
 					$filter = array('t.fk_product' => $prod->id,'t.fk_soc' => $object->thirdparty->id);
 
 					$result = $prodcustprice->fetch_all('', '', 0, 0, $filter);
-					if ($result) {
-						if (count($prodcustprice->lines) > 0) {
+					if ($result >= 0) 
+					{
+						if (count($prodcustprice->lines) > 0)
+						{
 							$pu_ht = price($prodcustprice->lines [0]->price);
 							$pu_ttc = price($prodcustprice->lines [0]->price_ttc);
 							$price_base_type = $prodcustprice->lines [0]->price_base_type;
 							$prod->tva_tx = $prodcustprice->lines [0]->tva_tx;
 						}
+					}
+					else 
+					{
+						setEventMessage($prodcustprice->error,'errors');
 					}
 				}
 
@@ -725,23 +734,23 @@ else if ($action == 'addline' && $user->rights->commande->creer) {
 					$object->generateDocument($object->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
 				}
 
-				unset($_POST ['prod_entry_mode']);
+				unset($_POST['prod_entry_mode']);
 
-				unset($_POST ['qty']);
-				unset($_POST ['type']);
-				unset($_POST ['remise_percent']);
-				unset($_POST ['price_ht']);
-				unset($_POST ['price_ttc']);
-				unset($_POST ['tva_tx']);
-				unset($_POST ['product_ref']);
-				unset($_POST ['product_label']);
-				unset($_POST ['product_desc']);
-				unset($_POST ['fournprice']);
-				unset($_POST ['buying_price']);
-				unset($_POST ['np_marginRate']);
-				unset($_POST ['np_markRate']);
-				unset($_POST ['dp_desc']);
-				unset($_POST ['idprod']);
+				unset($_POST['qty']);
+				unset($_POST['type']);
+				unset($_POST['remise_percent']);
+				unset($_POST['price_ht']);
+				unset($_POST['price_ttc']);
+				unset($_POST['tva_tx']);
+				unset($_POST['product_ref']);
+				unset($_POST['product_label']);
+				unset($_POST['product_desc']);
+				unset($_POST['fournprice']);
+				unset($_POST['buying_price']);
+				unset($_POST['np_marginRate']);
+				unset($_POST['np_markRate']);
+				unset($_POST['dp_desc']);
+				unset($_POST['idprod']);
 
 		    	unset($_POST['date_starthour']);
 		    	unset($_POST['date_startmin']);
@@ -796,7 +805,7 @@ else if ($action == 'updateligne' && $user->rights->commande->creer && GETPOST('
 	// Unset extrafield POST Data
 	if (is_array($extralabelsline)) {
 		foreach ($extralabelsline as $key => $value) {
-			unset($_POST ["options_" . $key]);
+			unset($_POST["options_" . $key]);
 		}
 	}
 
@@ -850,18 +859,18 @@ else if ($action == 'updateligne' && $user->rights->commande->creer && GETPOST('
 				$object->generateDocument($object->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
 			}
 
-			unset($_POST ['qty']);
-			unset($_POST ['type']);
-			unset($_POST ['productid']);
-			unset($_POST ['remise_percent']);
-			unset($_POST ['price_ht']);
-			unset($_POST ['price_ttc']);
-			unset($_POST ['tva_tx']);
-			unset($_POST ['product_ref']);
-			unset($_POST ['product_label']);
-			unset($_POST ['product_desc']);
-			unset($_POST ['fournprice']);
-			unset($_POST ['buying_price']);
+			unset($_POST['qty']);
+			unset($_POST['type']);
+			unset($_POST['productid']);
+			unset($_POST['remise_percent']);
+			unset($_POST['price_ht']);
+			unset($_POST['price_ttc']);
+			unset($_POST['tva_tx']);
+			unset($_POST['product_ref']);
+			unset($_POST['product_label']);
+			unset($_POST['product_desc']);
+			unset($_POST['fournprice']);
+			unset($_POST['buying_price']);
 		} else {
 			setEventMessage($object->error, 'errors');
 		}
@@ -1699,6 +1708,8 @@ if ($action == 'create' && $user->rights->commande->creer) {
 		$author = new User($db);
 		$author->fetch($object->user_author_id);
 
+		$res = $object->fetch_optionals($object->id, $extralabels);
+
 		$head = commande_prepare_head($object);
 		dol_fiche_head($head, 'order', $langs->trans("CustomerOrder"), 0, 'order');
 
@@ -1872,9 +1883,9 @@ if ($action == 'create' && $user->rights->commande->creer) {
 
 			// Local taxes
 		if ($mysoc->localtax1_assuj == "1" || $object->total_localtax1 != 0)
-			$nbrow ++;
+			$nbrow++;
 		if ($mysoc->localtax2_assuj == "1" || $object->total_localtax2 != 0 )
-			$nbrow ++;
+			$nbrow++;
 
 		print '<table class="border" width="100%">';
 
@@ -2120,30 +2131,38 @@ if ($action == 'create' && $user->rights->commande->creer) {
 		}
 
 		// Other attributes (TODO Move this into an include)
-		$res = $object->fetch_optionals($object->id, $extralabels);
 		$parameters = array('colspan' => ' colspan="3"');
-		$reshook = $hookmanager->executeHooks('formObjectOptions', $parameters, $object, $action); // Note that $action and $object may have been modified by
-		                                                                                      // hook
-		if (empty($reshook) && ! empty($extrafields->attribute_label)) {
-			foreach ($extrafields->attribute_label as $key => $label) {
-				if ($action == 'edit_extras') {
-					$value = (isset($_POST ["options_" . $key]) ? $_POST ["options_" . $key] : $object->array_options ["options_" . $key]);
-				} else {
-					$value = $object->array_options ["options_" . $key];
+		$reshook = $hookmanager->executeHooks('formObjectOptions', $parameters, $object, $action); // Note that $action and $object may have been modified by hook
+		if (empty($reshook) && ! empty($extrafields->attribute_label))
+		{
+			foreach ($extrafields->attribute_label as $key => $label)
+			{
+				if ($action == 'edit_extras')
+				{
+					$value = (isset($_POST["options_".$key])?$_POST["options_".$key]:$object->array_options["options_".$key]);
 				}
-				if ($extrafields->attribute_type [$key] == 'separate') {
+				else
+				{
+					$value = $object->array_options["options_" . $key];
+				}
+
+				if ($extrafields->attribute_type[$key] == 'separate')
+				{
 					print $extrafields->showSeparator($key);
-				} else {
+				}
+				else
+				{
 					print '<tr><td';
-					if (! empty($extrafields->attribute_required [$key]))
-						print ' class="fieldrequired"';
+					if (! empty($extrafields->attribute_required [$key])) print ' class="fieldrequired"';
 					print '>' . $label . '</td><td colspan="5">';
 					// Convert date into timestamp format
-					if (in_array($extrafields->attribute_type [$key], array('date','datetime'))) {
-						$value = isset($_POST ["options_" . $key]) ? dol_mktime($_POST ["options_" . $key . "hour"], $_POST ["options_" . $key . "min"], 0, $_POST ["options_" . $key . "month"], $_POST ["options_" . $key . "day"], $_POST ["options_" . $key . "year"]) : $db->jdate($object->array_options ['options_' . $key]);
+					if (in_array($extrafields->attribute_type [$key], array('date','datetime')))
+					{
+						$value = isset($_POST["options_" . $key]) ? dol_mktime($_POST["options_" . $key . "hour"], $_POST["options_" . $key . "min"], 0, $_POST["options_" . $key . "month"], $_POST["options_" . $key . "day"], $_POST["options_" . $key . "year"]) : $db->jdate($object->array_options ['options_' . $key]);
 					}
 
-					if ($action == 'edit_extras' && $user->rights->commande->creer && GETPOST('attribute') == $key) {
+					if ($action == 'edit_extras' && $user->rights->commande->creer && GETPOST('attribute') == $key)
+					{
 						print '<form enctype="multipart/form-data" action="' . $_SERVER["PHP_SELF"] . '" method="post" name="formsoc">';
 						print '<input type="hidden" name="action" value="update_extras">';
 						print '<input type="hidden" name="attribute" value="' . $key . '">';
@@ -2154,7 +2173,9 @@ if ($action == 'create' && $user->rights->commande->creer) {
 
 						print '<input type="submit" class="button" value="' . $langs->trans('Modify') . '">';
 						print '</form>';
-					} else {
+					}
+					else
+					{
 						print $extrafields->showOutputField($key, $value);
 						if ($object->statut == 0 && $user->rights->commande->creer)
 							print '<a href="' . $_SERVER['PHP_SELF'] . '?id=' . $object->id . '&action=edit_extras&attribute=' . $key . '">' . img_picto('', 'edit') . ' ' . $langs->trans('Modify') . '</a>';
@@ -2516,7 +2537,7 @@ if ($action == 'create' && $user->rights->commande->creer) {
 
 			if (is_array($contactarr) && count($contactarr) > 0) {
 				foreach ($contactarr as $contact) {
-					if ($contact ['libelle'] == $langs->trans('TypeContact_commande_external_CUSTOMER')) {	// TODO Use code and not label
+					if ($contact['libelle'] == $langs->trans('TypeContact_commande_external_CUSTOMER')) {	// TODO Use code and not label
 						$contactstatic = new Contact($db);
 						$contactstatic->fetch($contact ['id']);
 						$custcontact = $contactstatic->getFullName($langs, 1);
@@ -2524,15 +2545,15 @@ if ($action == 'create' && $user->rights->commande->creer) {
 				}
 
 				if (! empty($custcontact)) {
-					$formmail->substit ['__CONTACTCIVNAME__'] = $custcontact;
+					$formmail->substit['__CONTACTCIVNAME__'] = $custcontact;
 				}
 			}
 
 			// Tableau des parametres complementaires
-			$formmail->param ['action'] = 'send';
-			$formmail->param ['models'] = 'order_send';
-			$formmail->param ['orderid'] = $object->id;
-			$formmail->param ['returnurl'] = $_SERVER["PHP_SELF"] . '?id=' . $object->id;
+			$formmail->param['action'] = 'send';
+			$formmail->param['models'] = 'order_send';
+			$formmail->param['orderid'] = $object->id;
+			$formmail->param['returnurl'] = $_SERVER["PHP_SELF"] . '?id=' . $object->id;
 
 			// Init list of files
 			if (GETPOST("mode") == 'init') {

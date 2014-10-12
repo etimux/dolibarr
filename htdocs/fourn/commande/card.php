@@ -72,7 +72,7 @@ if ($user->societe_id) $socid=$user->societe_id;
 $result = restrictedArea($user, 'fournisseur', $id, '', 'commande');
 
 // Initialize technical object to manage hooks of thirdparties. Note that conf->hooks_modules contains array array
-$hookmanager->initHooks(array('ordersuppliercard'));
+$hookmanager->initHooks(array('ordersuppliercard','globalcard'));
 
 $object = new CommandeFournisseur($db);
 $extrafields = new ExtraFields($db);
@@ -110,6 +110,7 @@ $permissionnote=$user->rights->fournisseur->commande->creer;	// Used by the incl
 
 $parameters=array('socid'=>$socid);
 $reshook=$hookmanager->executeHooks('doActions',$parameters,$object,$action);    // Note that $action and $object may have been modified by some hooks
+if ($reshook < 0) setEventMessages($hookmanager->error, $hookmanager->errors, 'errors');
 
 include DOL_DOCUMENT_ROOT.'/core/actions_setnotes.inc.php';	// Must be include, not includ_once
 
@@ -1188,19 +1189,20 @@ if ($action=="create")
 }
 elseif (! empty($object->id))
 {
-	$author	= new User($db);
-	$author->fetch($object->user_author_id);
-
     $societe = new Fournisseur($db);
     $result=$societe->fetch($object->socid);
     if ($result < 0) dol_print_error($db);
+
+	$author	= new User($db);
+	$author->fetch($object->user_author_id);
+
+	$res=$object->fetch_optionals($object->id,$extralabels);
 
 	$head = ordersupplier_prepare_head($object);
 
 	$title=$langs->trans("SupplierOrder");
 	dol_fiche_head($head, 'card', $title, 0, 'order');
 
-	$res=$object->fetch_optionals($object->id,$extralabels);
 
 	/*
 	 * Confirmation de la suppression de la commande
@@ -1482,24 +1484,19 @@ elseif (! empty($object->id))
 		print '</tr>';
 	}
 
-	// Other attributes
+	// Other attributes (TODO Move this into an include)
 	$parameters=array('socid'=>$socid, 'colspan' => ' colspan="3"');
 	$reshook=$hookmanager->executeHooks('formObjectOptions',$parameters,$object,$action);    // Note that $action and $object may have been modified by hook
 	if (empty($reshook) && ! empty($extrafields->attribute_label))
 	{
-		if ($action == 'edit_extras')
-		{
-			print '<form enctype="multipart/form-data" action="'.$_SERVER["PHP_SELF"].'" method="post" name="formsoc">';
-			print '<input type="hidden" name="action" value="update_extras">';
-			print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
-			print '<input type="hidden" name="id" value="'.$object->id.'">';
-		}
-
 		foreach($extrafields->attribute_label as $key=>$label)
 		{
-			if ($action == 'edit_extras') {
+			if ($action == 'edit_extras')
+			{
 				$value=(isset($_POST["options_".$key])?$_POST["options_".$key]:$object->array_options["options_".$key]);
-			} else {
+			}
+			else
+			{
 				$value=$object->array_options["options_".$key];
 			}
 
@@ -1518,15 +1515,25 @@ elseif (! empty($object->id))
 					$value = isset($_POST["options_".$key])?dol_mktime($_POST["options_".$key."hour"], $_POST["options_".$key."min"], 0, $_POST["options_".$key."month"], $_POST["options_".$key."day"], $_POST["options_".$key."year"]):$db->jdate($object->array_options['options_'.$key]);
 				}
 
-				if ($action == 'edit_extras' && $user->rights->fournisseur->commande->creer)
+				if ($action == 'edit_extras' && $user->rights->commande->creer && GETPOST('attribute') == $key)
 				{
-		  			print $extrafields->showInputField($key,$value);
+					print '<form enctype="multipart/form-data" action="' . $_SERVER["PHP_SELF"] . '" method="post" name="formsoc">';
+					print '<input type="hidden" name="action" value="update_extras">';
+					print '<input type="hidden" name="attribute" value="' . $key . '">';
+					print '<input type="hidden" name="token" value="' . $_SESSION ['newtoken'] . '">';
+					print '<input type="hidden" name="id" value="' . $object->id . '">';
+
+					print $extrafields->showInputField($key, $value);
+
+					print '<input type="submit" class="button" value="' . $langs->trans('Modify') . '">';
+					print '</form>';
 				}
 				else
 				{
-		  			print $extrafields->showOutputField($key,$value);
+					print $extrafields->showOutputField($key, $value);
+					if ($object->statut == 0 && $user->rights->commande->creer)
+						print '<a href="' . $_SERVER['PHP_SELF'] . '?id=' . $object->id . '&action=edit_extras&attribute=' . $key . '">' . img_picto('', 'edit') . ' ' . $langs->trans('Modify') . '</a>';
 				}
-
 				print '</td></tr>'."\n";
 		  	}
 		}
@@ -1814,98 +1821,104 @@ elseif (! empty($object->id))
 		/**
 		 * Boutons actions
 		 */
-		if ($user->societe_id == 0 && $action != 'edit_line' && $action != 'delete')
+		$parameters = array();
+		$reshook = $hookmanager->executeHooks('addMoreActionsButtons', $parameters, $object, $action); // Note that $action and $object may have been
+		// modified by hook
+		if (empty($reshook))
 		{
-			print '<div	 class="tabsAction">';
-
-			// Validate
-			if ($object->statut == 0 && $num > 0)
+			if ($user->societe_id == 0 && $action != 'edit_line' && $action != 'delete')
 			{
-				if ($user->rights->fournisseur->commande->valider)
+				print '<div	 class="tabsAction">';
+	
+				// Validate
+				if ($object->statut == 0 && $num > 0)
 				{
-					print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&amp;action=valid"';
-					print '>'.$langs->trans('Validate').'</a>';
+					if ($user->rights->fournisseur->commande->valider)
+					{
+						print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&amp;action=valid"';
+						print '>'.$langs->trans('Validate').'</a>';
+					}
 				}
-			}
-
-			// Modify
-			if ($object->statut == 1)
-			{
-				if ($user->rights->fournisseur->commande->commander)
+	
+				// Modify
+				if ($object->statut == 1)
 				{
-					print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&amp;action=reopen">'.$langs->trans("Modify").'</a>';
+					if ($user->rights->fournisseur->commande->commander)
+					{
+						print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&amp;action=reopen">'.$langs->trans("Modify").'</a>';
+					}
 				}
-			}
-
-			// Approve
-			if ($object->statut == 1)
-			{
-				if ($user->rights->fournisseur->commande->approuver)
+	
+				// Approve
+				if ($object->statut == 1)
 				{
-					print '<a class="butAction"	href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&amp;action=approve">'.$langs->trans("ApproveOrder").'</a>';
-					print '<a class="butAction"	href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&amp;action=refuse">'.$langs->trans("RefuseOrder").'</a>';
+					if ($user->rights->fournisseur->commande->approuver)
+					{
+						print '<a class="butAction"	href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&amp;action=approve">'.$langs->trans("ApproveOrder").'</a>';
+						print '<a class="butAction"	href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&amp;action=refuse">'.$langs->trans("RefuseOrder").'</a>';
+					}
+					else
+					{
+						print '<a class="butActionRefused" href="#">'.$langs->trans("ApproveOrder").'</a>';
+						print '<a class="butActionRefused" href="#">'.$langs->trans("RefuseOrder").'</a>';
+					}
 				}
-				else
+	
+				// Send
+				if (in_array($object->statut, array(2, 3, 4, 5)))
 				{
-					print '<a class="butActionRefused" href="#">'.$langs->trans("ApproveOrder").'</a>';
-					print '<a class="butActionRefused" href="#">'.$langs->trans("RefuseOrder").'</a>';
+					if ($user->rights->fournisseur->commande->commander)
+					{
+						print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&amp;action=presend&amp;mode=init">'.$langs->trans('SendByMail').'</a>';
+					}
 				}
-			}
-
-			// Send
-			if (in_array($object->statut, array(2, 3, 4, 5)))
-			{
-				if ($user->rights->fournisseur->commande->commander)
+	
+				// Reopen
+				if (in_array($object->statut, array(2, 5, 6, 7, 9)))
 				{
-					print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&amp;action=presend&amp;mode=init">'.$langs->trans('SendByMail').'</a>';
+					if ($user->rights->fournisseur->commande->commander)
+					{
+						print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&amp;action=reopen">'.$langs->trans("ReOpen").'</a>';
+					}
 				}
-			}
-
-			// Reopen
-			if (in_array($object->statut, array(2, 5, 6, 7, 9)))
-			{
-				if ($user->rights->fournisseur->commande->commander)
+	
+				// Create bill
+				if (! empty($conf->fournisseur->enabled) && $object->statut >= 2)  // 2 means accepted
 				{
-					print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&amp;action=reopen">'.$langs->trans("ReOpen").'</a>';
+					if ($user->rights->fournisseur->facture->creer)
+					{
+						print '<a class="butAction" href="'.DOL_URL_ROOT.'/fourn/facture/card.php?action=create&amp;origin='.$object->element.'&amp;originid='.$object->id.'&amp;socid='.$object->socid.'">'.$langs->trans("CreateBill").'</a>';
+					}
+	
+					//if ($user->rights->fournisseur->commande->creer && $object->statut > 2)
+					//{
+					//	print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&amp;action=classifybilled">'.$langs->trans("ClassifyBilled").'</a>';
+					//}
 				}
-			}
-
-			// Create bill
-			if (! empty($conf->fournisseur->enabled) && $object->statut >= 2)  // 2 means accepted
-			{
-				if ($user->rights->fournisseur->facture->creer)
+	
+				// Cancel
+				if ($object->statut == 2)
 				{
-					print '<a class="butAction" href="'.DOL_URL_ROOT.'/fourn/facture/card.php?action=create&amp;origin='.$object->element.'&amp;originid='.$object->id.'&amp;socid='.$object->socid.'">'.$langs->trans("CreateBill").'</a>';
+					if ($user->rights->fournisseur->commande->commander)
+					{
+						print '<a class="butActionDelete" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&amp;action=cancel">'.$langs->trans("CancelOrder").'</a>';
+					}
 				}
-
-				//if ($user->rights->fournisseur->commande->creer && $object->statut > 2)
-				//{
-				//	print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&amp;action=classifybilled">'.$langs->trans("ClassifyBilled").'</a>';
-				//}
-			}
-
-			// Cancel
-			if ($object->statut == 2)
-			{
-				if ($user->rights->fournisseur->commande->commander)
+	
+				// Clone
+				if ($user->rights->fournisseur->commande->creer)
 				{
-					print '<a class="butActionDelete" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&amp;action=cancel">'.$langs->trans("CancelOrder").'</a>';
+					print '<a class="butAction" href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'&amp;socid='.$object->socid.'&amp;action=clone&amp;object=order">'.$langs->trans("ToClone").'</a>';
 				}
+	
+				// Delete
+				if ($user->rights->fournisseur->commande->supprimer)
+				{
+					print '<a class="butActionDelete" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&amp;action=delete">'.$langs->trans("Delete").'</a>';
+				}
+	
+				print "</div>";
 			}
-
-			// Clone
-			if ($user->rights->fournisseur->commande->creer)
-			{
-				print '<a class="butAction" href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'&amp;socid='.$object->socid.'&amp;action=clone&amp;object=order">'.$langs->trans("ToClone").'</a>';
-			}
-
-			// Delete
-			if ($user->rights->fournisseur->commande->supprimer)
-			{
-				print '<a class="butActionDelete" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&amp;action=delete">'.$langs->trans("Delete").'</a>';
-			}
-
-			print "</div>";
 		}
 		print "<br>";
 

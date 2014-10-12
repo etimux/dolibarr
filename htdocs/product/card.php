@@ -1,16 +1,16 @@
 <?php
-/* Copyright (C) 2001-2007 Rodolphe Quiedeville <rodolphe@quiedeville.org>
- * Copyright (C) 2004-2014 Laurent Destailleur  <eldy@users.sourceforge.net>
- * Copyright (C) 2005      Eric Seigne          <eric.seigne@ryxeo.com>
- * Copyright (C) 2005-2012 Regis Houssin        <regis.houssin@capnetworks.com>
- * Copyright (C) 2006      Andre Cianfarani     <acianfa@free.fr>
- * Copyright (C) 2006      Auguria SARL         <info@auguria.org>
- * Copyright (C) 2010-2014 Juanjo Menent        <jmenent@2byte.es>
- * Copyright (C) 2013-2014 Marcos García        <marcosgdf@gmail.com>
- * Copyright (C) 2013      Cédric Salvador      <csalvador@gpcsolutions.fr>
- * Copyright (C) 2011-2014 Alexandre Spangaro   <alexandre.spangaro@gmail.com>
- * Copyright (C) 2014      Cédric Gross         <c.gross@kreiz-it.fr>
- * Copyright (C) 2014	   Ferran Marcet		<fmarcet@2byte.es>
+/* Copyright (C) 2001-2007	Rodolphe Quiedeville	<rodolphe@quiedeville.org>
+ * Copyright (C) 2004-2014	Laurent Destailleur		<eldy@users.sourceforge.net>
+ * Copyright (C) 2005		Eric Seigne				<eric.seigne@ryxeo.com>
+ * Copyright (C) 2005-2014	Regis Houssin			<regis.houssin@capnetworks.com>
+ * Copyright (C) 2006		Andre Cianfarani		<acianfa@free.fr>
+ * Copyright (C) 2006		Auguria SARL			<info@auguria.org>
+ * Copyright (C) 2010-2014	Juanjo Menent			<jmenent@2byte.es>
+ * Copyright (C) 2013-2014	Marcos García			<marcosgdf@gmail.com>
+ * Copyright (C) 2013		Cédric Salvador			<csalvador@gpcsolutions.fr>
+ * Copyright (C) 2011-2014	Alexandre Spangaro		<alexandre.spangaro@gmail.com>
+ * Copyright (C) 2014		Cédric Gross			<c.gross@kreiz-it.fr>
+ * Copyright (C) 2014		Ferran Marcet			<fmarcet@2byte.es>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,7 +48,7 @@ $langs->load("products");
 $langs->load("other");
 if (! empty($conf->stock->enabled)) $langs->load("stocks");
 if (! empty($conf->facture->enabled)) $langs->load("bills");
-if ($conf->productbatch->enabled) $langs->load("productbatch");
+if (! empty($conf->productbatch->enabled)) $langs->load("productbatch");
 
 $mesg=''; $error=0; $errors=array(); $_error=0;
 
@@ -88,7 +88,7 @@ $fieldtype = (! empty($ref) ? 'ref' : 'rowid');
 $result=restrictedArea($user,'produit|service',$fieldvalue,'product&product','','',$fieldtype,$objcanvas);
 
 // Initialize technical object to manage hooks of thirdparties. Note that conf->hooks_modules contains array array
-$hookmanager->initHooks(array('productcard'));
+$hookmanager->initHooks(array('productcard','globalcard'));
 
 
 
@@ -101,7 +101,7 @@ if (! empty($conf->global->MAIN_USE_ADVANCED_PERMS) && empty($user->rights->barc
 
 $parameters=array('id'=>$id, 'ref'=>$ref, 'objcanvas'=>$objcanvas);
 $reshook=$hookmanager->executeHooks('doActions',$parameters,$object,$action);    // Note that $action and $object may have been modified by some hooks
-$error=$hookmanager->error; $errors=$hookmanager->errors;
+if ($reshook < 0) setEventMessages($hookmanager->error, $hookmanager->errors, 'errors');
 
 if (empty($reshook))
 {
@@ -863,7 +863,7 @@ else
         print '</td></tr>';
 
 	    // Batch number management
-		if ($conf->productbatch->enabled)
+		if (! empty($conf->productbatch->enabled))
 		{
 			print '<tr><td class="fieldrequired">'.$langs->trans("Status").' ('.$langs->trans("Batch").')</td><td colspan="3">';
 			$statutarray=array('0' => $langs->trans("ProductStatusNotOnBatch"), '1' => $langs->trans("ProductStatusOnBatch"));
@@ -1420,12 +1420,20 @@ else
 
             // Status (to sell)
             print '<tr><td>'.$langs->trans("Status").' ('.$langs->trans("Sell").')</td><td colspan="2">';
-            print $object->getLibStatut(2,0);
+            if (! empty($conf->use_javascript_ajax)) {
+                print ajax_productonoff($object->id, 'status');
+            } else {
+                print $object->getLibStatut(2,0);
+            }
             print '</td></tr>';
 
             // Status (to buy)
             print '<tr><td>'.$langs->trans("Status").' ('.$langs->trans("Buy").')</td><td colspan="2">';
-            print $object->getLibStatut(2,1);
+            if (! empty($conf->use_javascript_ajax)) {
+                print ajax_productonoff($object->id, 'status_buy');
+            } else {
+                print $object->getLibStatut(2,1);
+            }
             print '</td></tr>';
 
 			// Batch number management (to batch)

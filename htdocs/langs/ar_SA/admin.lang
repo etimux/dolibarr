@@ -45,6 +45,8 @@ ErrorModuleRequireDolibarrVersion=خطأ ، هذا النموذج يتطلب ن�
 ErrorDecimalLargerThanAreForbidden=خطأ, برنامج دوليبار <b>%s</b> الحالي لا يدعم دقة أعلى من الحالية
 DictionarySetup=Dictionary setup
 Dictionary=Dictionaries
+Chartofaccounts=Chart of accounts
+Fiscalyear=Fiscal years
 ErrorReservedTypeSystemSystemAuto=القيمة 'system' و 'systemauto' لهذا النوع محفوظ. يمكنك إستخدام 'user' كقيمة لإضافة السجل الخاص بك
 ErrorCodeCantContainZero=لا يمكن إستخدام القيمة 0 لهذا الكود
 DisableJavascript=Disable JavaScript and Ajax functions (Recommended for blind person or text browsers)
@@ -217,6 +219,7 @@ AutomaticIfJavascriptDisabled=تلقائيا إذا تم تعطيل جافاسك
 AvailableOnlyIfJavascriptNotDisabled=متاحا إلا إذا كان جافا سكريبت غير المعوقين
 AvailableOnlyIfJavascriptAndAjaxNotDisabled=متاحا إلا إذا كان جافا سكريبت غير المعوقين
 Required=مطلوب
+UsedOnlyWithTypeOption=Used by some agenda option only
 Security=الأمن
 Passwords=كلمة السر
 DoNotStoreClearPassword=لا تخزن كلمات السر في قاعدة بيانات واضحة في
@@ -582,9 +585,6 @@ Permission92=إنشاء / تعديل المساهمات الاجتماعية و�
 Permission93=حذف المساهمات الاجتماعية وضريبة القيمة المضافة
 Permission94=تصدير المساهمات الاجتماعية
 Permission95=قراءة تقارير
-Permission96=ارسال الإعداد
-Permission97=قراءة ارسال الفواتير والمحاسبة
-Permission98=ارسال الفاتورة 'sخطوط المحاسبة
 Permission101=قراءة الإرسال
 Permission102=إنشاء / تعديل الإرسال
 Permission104=صحة الإرسال
