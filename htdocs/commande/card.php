@@ -1,6 +1,6 @@
 <?php
 /* Copyright (C) 2003-2006	Rodolphe Quiedeville	<rodolphe@quiedeville.org>
- * Copyright (C) 2004-2013	Laurent Destailleur		<eldy@users.sourceforge.net>
+ * Copyright (C) 2004-2014	Laurent Destailleur		<eldy@users.sourceforge.net>
  * Copyright (C) 2005		Marc Barilley / Ocebo	<marc@ocebo.com>
  * Copyright (C) 2005-2013	Regis Houssin			<regis.houssin@capnetworks.com>
  * Copyright (C) 2006		Andre Cianfarani		<acianfa@free.fr>
@@ -618,7 +618,7 @@ else if ($action == 'addline' && $user->rights->commande->creer) {
 					$filter = array('t.fk_product' => $prod->id,'t.fk_soc' => $object->thirdparty->id);
 
 					$result = $prodcustprice->fetch_all('', '', 0, 0, $filter);
-					if ($result >= 0) 
+					if ($result >= 0)
 					{
 						if (count($prodcustprice->lines) > 0)
 						{
@@ -628,7 +628,7 @@ else if ($action == 'addline' && $user->rights->commande->creer) {
 							$prod->tva_tx = $prodcustprice->lines [0]->tva_tx;
 						}
 					}
-					else 
+					else
 					{
 						setEventMessage($prodcustprice->error,'errors');
 					}
@@ -908,20 +908,23 @@ else if ($action == 'confirm_validate' && $confirm == 'yes' && $user->rights->co
 
 	if (! $error) {
 		$result = $object->valid($user, $idwarehouse);
-		if ($result >= 0) {
+		if ($result >= 0)
+		{
 			// Define output language
-			$outputlangs = $langs;
-			$newlang = '';
-			if ($conf->global->MAIN_MULTILANGS && empty($newlang) && ! empty($_REQUEST['lang_id']))
-				$newlang = $_REQUEST['lang_id'];
-			if ($conf->global->MAIN_MULTILANGS && empty($newlang))
-				$newlang = $object->thirdparty->default_lang;
-			if (! empty($newlang)) {
-				$outputlangs = new Translate("", $conf);
-				$outputlangs->setDefaultLang($newlang);
-			}
-			if (empty($conf->global->MAIN_DISABLE_PDF_AUTOUPDATE)) {
-				$object->generateDocument($object->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
+			if (empty($conf->global->MAIN_DISABLE_PDF_AUTOUPDATE))
+			{
+				$outputlangs = $langs;
+				$newlang = '';
+				if ($conf->global->MAIN_MULTILANGS && empty($newlang) && GETPOST('lang_id')) $newlang = GETPOST('lang_id','alpha');
+				if ($conf->global->MAIN_MULTILANGS && empty($newlang))	$newlang = $object->thirdparty->default_lang;
+				if (! empty($newlang)) {
+					$outputlangs = new Translate("", $conf);
+					$outputlangs->setDefaultLang($newlang);
+				}
+				$model=$object->modelpdf;
+				if (empty($model)) { $tmp=getListOfModels($db, 'order'); $keys=array_keys($tmp); $model=$keys[0]; }
+				$ret = $object->fetch($id); // Reload to get new records
+				$object->generateDocument($model, $outputlangs, $hidedetails, $hidedesc, $hideref);
 			}
 		}
 	}
@@ -954,21 +957,23 @@ else if ($action == 'confirm_modif' && $user->rights->commande->creer) {
 
 	if (! $error) {
 		$result = $object->set_draft($user, $idwarehouse);
-		if ($result >= 0) {
+		if ($result >= 0)
+		{
 			// Define output language
-			$outputlangs = $langs;
-			$newlang = '';
-			if ($conf->global->MAIN_MULTILANGS && empty($newlang) && ! empty($_REQUEST['lang_id']))
-				$newlang = $_REQUEST['lang_id'];
-			if ($conf->global->MAIN_MULTILANGS && empty($newlang))
-				$newlang = $object->thirdparty->default_lang;
-			if (! empty($newlang)) {
-				$outputlangs = new Translate("", $conf);
-				$outputlangs->setDefaultLang($newlang);
-			}
-			if (empty($conf->global->MAIN_DISABLE_PDF_AUTOUPDATE)) {
-				$ret = $object->fetch($object->id); // Reload to get new records
-				$object->generateDocument($object->modelpdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
+			if (empty($conf->global->MAIN_DISABLE_PDF_AUTOUPDATE))
+			{
+				$outputlangs = $langs;
+				$newlang = '';
+				if ($conf->global->MAIN_MULTILANGS && empty($newlang) && GETPOST('lang_id')) $newlang = GETPOST('lang_id','alpha');
+				if ($conf->global->MAIN_MULTILANGS && empty($newlang))	$newlang = $object->thirdparty->default_lang;
+				if (! empty($newlang)) {
+					$outputlangs = new Translate("", $conf);
+					$outputlangs->setDefaultLang($newlang);
+				}
+				$model=$object->modelpdf;
+				if (empty($model)) { $tmp=getListOfModels($db, 'order'); $keys=array_keys($tmp); $model=$keys[0]; }
+				$ret = $object->fetch($id); // Reload to get new records
+				$object->generateDocument($model, $outputlangs, $hidedetails, $hidedesc, $hideref);
 			}
 		}
 	}
@@ -1147,168 +1152,17 @@ else if ($action == 'update_extras') {
 }
 
 /*
- * Add file in email form
-*/
-if (GETPOST('addfile')) {
-	require_once DOL_DOCUMENT_ROOT . '/core/lib/files.lib.php';
-
-	// Set tmp user directory TODO Use a dedicated directory for temp mails files
-	$vardir = $conf->user->dir_output . "/" . $user->id;
-	$upload_dir_tmp = $vardir . '/temp';
-
-	dol_add_file_process($upload_dir_tmp, 0, 0);
-	$action = 'presend';
-}
-
-/*
- * Remove file in email form
-*/
-if (GETPOST('removedfile')) {
-	require_once DOL_DOCUMENT_ROOT . '/core/lib/files.lib.php';
-
-	// Set tmp user directory
-	$vardir = $conf->user->dir_output . "/" . $user->id;
-	$upload_dir_tmp = $vardir . '/temp';
-
-	// TODO Delete only files that was uploaded from email form
-	dol_remove_file_process(GETPOST('removedfile'), 0);
-	$action = 'presend';
-}
-
-/*
  * Send mail
-*/
-if ($action == 'send' && ! GETPOST('addfile') && ! GETPOST('removedfile') && ! GETPOST('cancel')) {
-	$langs->load('mails');
+ */
 
-	if ($object->id > 0) {
-		// $ref = dol_sanitizeFileName($object->ref);
-		// $file = $conf->commande->dir_output . '/' . $ref . '/' . $ref . '.pdf';
+// Actions to send emails
+$actiontypecode='AC_COM';
+$trigger_name='ORDER_SENTBYMAIL';
+$paramname='id';
+$mode='emailfromorder';
+include DOL_DOCUMENT_ROOT.'/core/actions_sendmails.inc.php';
 
-		// if (is_readable($file))
-		// {
-		if (GETPOST('sendto')) {
-			// Le destinataire a ete fourni via le champ libre
-			$sendto = GETPOST('sendto');
-			$sendtoid = 0;
-		} elseif (GETPOST('receiver') != '-1') {
-			// Recipient was provided from combo list
-			if (GETPOST('receiver') == 'thirdparty') 			// Id of third party
-			{
-				$sendto = $object->thirdparty->email;
-				$sendtoid = 0;
-			} else 			// Id du contact
-			{
-				$sendto = $object->thirdparty->contact_get_property(GETPOST('receiver'), 'email');
-				$sendtoid = GETPOST('receiver');
-			}
-		}
 
-		if (dol_strlen($sendto)) {
-			$langs->load("commercial");
-
-			$from = GETPOST('fromname') . ' <' . GETPOST('frommail') . '>';
-			$replyto = GETPOST('replytoname') . ' <' . GETPOST('replytomail') . '>';
-			$message = GETPOST('message');
-			$sendtocc = GETPOST('sendtocc');
-			$sendtobcc = (empty($conf->global->MAIN_MAIL_AUTOCOPY_ORDER_TO)?'':$conf->global->MAIN_MAIL_AUTOCOPY_ORDER_TO);
-			$deliveryreceipt = GETPOST('deliveryreceipt');
-
-			if ($action == 'send') {
-				if (dol_strlen(GETPOST('subject')))
-					$subject = GETPOST('subject');
-				else
-					$subject = $langs->transnoentities('Order') . ' ' . $object->ref;
-				$actiontypecode = 'AC_COM';
-				$actionmsg = $langs->transnoentities('MailSentBy') . ' ' . $from . ' ' . $langs->transnoentities('To') . ' ' . $sendto . ".\n";
-				if ($message) {
-					$actionmsg .= $langs->transnoentities('MailTopic') . ": " . $subject . "\n";
-					$actionmsg .= $langs->transnoentities('TextUsedInTheMessageBody') . ":\n";
-					$actionmsg .= $message;
-				}
-				$actionmsg2 = $langs->transnoentities('Action' . $actiontypecode);
-			}
-
-			// Create form object
-			include_once DOL_DOCUMENT_ROOT . '/core/class/html.formmail.class.php';
-			$formmail = new FormMail($db);
-
-			$attachedfiles = $formmail->get_attached_files();
-			$filepath = $attachedfiles ['paths'];
-			$filename = $attachedfiles ['names'];
-			$mimetype = $attachedfiles ['mimes'];
-
-			// Send mail
-			require_once DOL_DOCUMENT_ROOT . '/core/class/CMailFile.class.php';
-			$mailfile = new CMailFile($subject, $sendto, $from, $message, $filepath, $mimetype, $filename, $sendtocc, $sendtobcc, $deliveryreceipt, - 1);
-			if ($mailfile->error) {
-				setEventMessage($mailfile->error, 'errors');
-			} else {
-				$result = $mailfile->sendfile();
-				if ($result) {
-					//Must not contain quotes
-					$mesg = $langs->trans('MailSuccessfulySent', $mailfile->getValidAddress($from, 2), $mailfile->getValidAddress($sendto, 2));
-					setEventMessage($mesg);
-
-					$error = 0;
-
-					// Initialisation donnees
-					$object->sendtoid = $sendtoid;
-					$object->actiontypecode = $actiontypecode;
-					$object->actionmsg = $actionmsg;
-					$object->actionmsg2 = $actionmsg2;
-					$object->fk_element = $object->id;
-					$object->elementtype = $object->element;
-
-					// Appel des triggers
-					include_once DOL_DOCUMENT_ROOT . '/core/class/interfaces.class.php';
-					$interface = new Interfaces($db);
-					$result = $interface->run_triggers('ORDER_SENTBYMAIL', $object, $user, $langs, $conf);
-					if ($result < 0) {
-						$error ++;
-						$this->errors = $interface->errors;
-					}
-					// Fin appel triggers
-
-					if ($error) {
-						dol_print_error($db);
-					} else {
-						// Redirect here
-						// This avoid sending mail twice if going out and then back to page
-						header('Location: ' . $_SERVER["PHP_SELF"] . '?id=' . $object->id);
-						exit();
-					}
-				} else {
-					$langs->load("other");
-					if ($mailfile->error) {
-						$mesg .= $langs->trans('ErrorFailedToSendMail', $from, $sendto);
-						$mesg .= '<br>' . $mailfile->error;
-					} else {
-						$mesg .= 'No mail sent. Feature is disabled by option MAIN_DISABLE_ALL_MAILS';
-					}
-
-					setEventMessage($mesg, 'errors');
-				}
-			}
-			/*            }
-			 else
-			{
-			$langs->load("other");
-			$mesg='<div class="error">'.$langs->trans('ErrorMailRecipientIsEmpty').' !</div>';
-			$action='presend';
-			dol_syslog('Recipient email is empty');
-			}*/
-		} else {
-			$langs->load("errors");
-			setEventMessage($langs->trans('ErrorCantReadFile', $file), 'errors');
-			dol_syslog('Failed to read file: ' . $file);
-		}
-	} else {
-		$langs->load("other");
-		setEventMessage($langs->trans('ErrorFailedToReadEntity', $langs->trans("Order")), 'errors');
-		dol_syslog($langs->trans('ErrorFailedToReadEntity', $langs->trans("Order")));
-	}
-}
 
 if (! $error && ! empty($conf->global->MAIN_DISABLE_CONTACTS_TAB) && $user->rights->commande->creer) {
 	if ($action == 'addcontact') {
@@ -2130,60 +1984,9 @@ if ($action == 'create' && $user->rights->commande->creer) {
 			print '</tr>';
 		}
 
-		// Other attributes (TODO Move this into an include)
-		$parameters = array('colspan' => ' colspan="3"');
-		$reshook = $hookmanager->executeHooks('formObjectOptions', $parameters, $object, $action); // Note that $action and $object may have been modified by hook
-		if (empty($reshook) && ! empty($extrafields->attribute_label))
-		{
-			foreach ($extrafields->attribute_label as $key => $label)
-			{
-				if ($action == 'edit_extras')
-				{
-					$value = (isset($_POST["options_".$key])?$_POST["options_".$key]:$object->array_options["options_".$key]);
-				}
-				else
-				{
-					$value = $object->array_options["options_" . $key];
-				}
-
-				if ($extrafields->attribute_type[$key] == 'separate')
-				{
-					print $extrafields->showSeparator($key);
-				}
-				else
-				{
-					print '<tr><td';
-					if (! empty($extrafields->attribute_required [$key])) print ' class="fieldrequired"';
-					print '>' . $label . '</td><td colspan="5">';
-					// Convert date into timestamp format
-					if (in_array($extrafields->attribute_type [$key], array('date','datetime')))
-					{
-						$value = isset($_POST["options_" . $key]) ? dol_mktime($_POST["options_" . $key . "hour"], $_POST["options_" . $key . "min"], 0, $_POST["options_" . $key . "month"], $_POST["options_" . $key . "day"], $_POST["options_" . $key . "year"]) : $db->jdate($object->array_options ['options_' . $key]);
-					}
-
-					if ($action == 'edit_extras' && $user->rights->commande->creer && GETPOST('attribute') == $key)
-					{
-						print '<form enctype="multipart/form-data" action="' . $_SERVER["PHP_SELF"] . '" method="post" name="formsoc">';
-						print '<input type="hidden" name="action" value="update_extras">';
-						print '<input type="hidden" name="attribute" value="' . $key . '">';
-						print '<input type="hidden" name="token" value="' . $_SESSION ['newtoken'] . '">';
-						print '<input type="hidden" name="id" value="' . $object->id . '">';
-
-						print $extrafields->showInputField($key, $value);
-
-						print '<input type="submit" class="button" value="' . $langs->trans('Modify') . '">';
-						print '</form>';
-					}
-					else
-					{
-						print $extrafields->showOutputField($key, $value);
-						if ($object->statut == 0 && $user->rights->commande->creer)
-							print '<a href="' . $_SERVER['PHP_SELF'] . '?id=' . $object->id . '&action=edit_extras&attribute=' . $key . '">' . img_picto('', 'edit') . ' ' . $langs->trans('Modify') . '</a>';
-					}
-					print '</td></tr>' . "\n";
-				}
-			}
-		}
+		// Other attributes
+		$cols = 3;
+		include DOL_DOCUMENT_ROOT . '/core/tpl/extrafields_view.tpl.php';
 
 		$rowspan = 4;
 		if ($mysoc->localtax1_assuj == "1" || $object->total_localtax1 != 0)

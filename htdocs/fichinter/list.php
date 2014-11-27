@@ -49,14 +49,26 @@ $offset = $conf->liste_limit * $page;
 $pageprev = $page - 1;
 $pagenext = $page + 1;
 if (! $sortorder) $sortorder="DESC";
-if (! $sortfield) $sortfield="fd.date";
+if (! $sortfield)
+{
+ 	if (empty($conf->global->FICHINTER_DISABLE_DETAILS)) $sortfield="fd.date";
+ 	else $sortfield="f.ref";
+}
 $limit = $conf->liste_limit;
 
-$search_ref=GETPOST('search_ref','alpha');
+$search_ref=GETPOST('search_ref')?GETPOST('search_ref','alpha'):GETPOST('search_inter','alpha');
 $search_company=GETPOST('search_company','alpha');
 $search_desc=GETPOST('search_desc','alpha');
 $search_status=GETPOST('search_status');
+$sall=GETPOST('sall');
 
+if (GETPOST("button_removefilter"))
+{
+	$search_ref="";
+	$search_company="";
+	$search_desc="";
+	$search_status="";
+}
 
 /*
  *	View
@@ -70,13 +82,12 @@ llxHeader('', $langs->trans("Intervention"));
 
 $sql = "SELECT";
 $sql.= " f.ref, f.rowid as fichid, f.fk_statut, f.description,";
-$sql.= " fd.description as descriptiondetail, fd.date as dp, fd.duree,";
+if (empty($conf->global->FICHINTER_DISABLE_DETAILS)) $sql.= " fd.description as descriptiondetail, fd.date as dp, fd.duree,";
 $sql.= " s.nom as name, s.rowid as socid, s.client";
 $sql.= " FROM (".MAIN_DB_PREFIX."societe as s";
-if (! $user->rights->societe->client->voir && empty($socid))
-	$sql.= ", ".MAIN_DB_PREFIX."societe_commerciaux as sc";
+if (! $user->rights->societe->client->voir && empty($socid)) $sql.= ", ".MAIN_DB_PREFIX."societe_commerciaux as sc";
 $sql.= ", ".MAIN_DB_PREFIX."fichinter as f)";
-$sql.= " LEFT JOIN ".MAIN_DB_PREFIX."fichinterdet as fd ON fd.fk_fichinter = f.rowid";
+if (empty($conf->global->FICHINTER_DISABLE_DETAILS)) $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."fichinterdet as fd ON fd.fk_fichinter = f.rowid";
 $sql.= " WHERE f.fk_soc = s.rowid ";
 $sql.= " AND f.entity = ".$conf->entity;
 if ($search_ref) {
@@ -86,7 +97,8 @@ if ($search_company) {
     $sql .= natural_search('s.nom', $search_company);
 }
 if ($search_desc) {
-    $sql .= natural_search(array('f.description', 'fd.description'), $search_desc);
+    if (empty($conf->global->FICHINTER_DISABLE_DETAILS)) $sql .= natural_search(array('f.description', 'fd.description'), $search_desc);
+    else $sql .= natural_search(array('f.description'), $search_desc);
 }
 if ($search_status != '' && $search_status >= 0) {
     $sql .= ' AND f.fk_statut = '.$search_status;
@@ -95,8 +107,14 @@ if (! $user->rights->societe->client->voir && empty($socid))
 	$sql .= " AND s.rowid = sc.fk_soc AND sc.fk_user = " .$user->id;
 if ($socid)
 	$sql.= " AND s.rowid = " . $socid;
+if ($sall) {
+	$arraytosearch=array('f.ref', 'f.description', 's.nom');
+	if (empty($conf->global->FICHINTER_DISABLE_DETAILS)) $arraytosearch=array('f.ref', 'f.description', 's.nom', 'fd.description');
+	$sql .= natural_search($arraytosearch, $sall);
+}
 $sql.= $db->order($sortfield,$sortorder);
 $sql.= $db->plimit($limit+1, $offset);
+//print $sql;
 
 $result=$db->query($sql);
 if ($result)
@@ -120,6 +138,7 @@ if ($result)
 		print_liste_field_titre($langs->trans("Duration"),$_SERVER["PHP_SELF"],"fd.duree","",$urlparam,'align="right"',$sortfield,$sortorder);
 	}
 	print_liste_field_titre($langs->trans("Status"),$_SERVER["PHP_SELF"],"f.fk_statut","",$urlparam,'align="right"',$sortfield,$sortorder);
+	print_liste_field_titre('',$_SERVER["PHP_SELF"], '');
 	print "</tr>\n";
 
 	print '<tr class="liste_titre">';
@@ -140,9 +159,10 @@ if ($result)
 	print '<td class="liste_titre" align="right">';
 	$liststatus=$interventionstatic->statuts_short;
 	print $form->selectarray('search_status', $liststatus, GETPOST('search_status'), 1, 0, 0, '', 1);
-	print '<input class="liste_titre" align="right" type="image" src="'.img_picto($langs->trans("Search"),'search.png','','',1).'" value="'.dol_escape_htmltag($langs->trans("Search")).'" title="'.dol_escape_htmltag($langs->trans("Search")).'">';
 	print '</td>';
-	print "</tr>\n";
+	print '<td class="liste_titre" align="right"><input type="image" class="liste_titre" name="button_search" src="'.img_picto($langs->trans("Search"),'search.png','','',1).'" value="'.dol_escape_htmltag($langs->trans("Search")).'" title="'.dol_escape_htmltag($langs->trans("Search")).'">';
+	print '<input type="image" class="liste_titre" name="button_removefilter" src="'.img_picto($langs->trans("Search"),'searchclear.png','','',1).'" value="'.dol_escape_htmltag($langs->trans("RemoveFilter")).'" title="'.dol_escape_htmltag($langs->trans("RemoveFilter")).'">';
+    print "</td></tr>\n";
 
 	$companystatic=new Societe($db);
 
@@ -173,7 +193,8 @@ if ($result)
 			print '<td align="right">'.convertSecondToTime($objp->duree).'</td>';
 		}
 		print '<td align="right">'.$interventionstatic->LibStatut($objp->fk_statut,5).'</td>';
-
+		
+		print '<td>&nbsp;</td>';
 		print "</tr>\n";
 
 		$total += $objp->duree;
@@ -183,10 +204,10 @@ if ($result)
 	if (empty($conf->global->FICHINTER_DISABLE_DETAILS))
 	{
 		print '<tr class="liste_total"><td colspan="5" class="liste_total">'.$langs->trans("Total").'</td>';
-		print '<td align="right" class="nowrap liste_total">'.convertSecondToTime($total).'</td><td>&nbsp;</td>';
+		print '<td align="right" class="nowrap liste_total">'.convertSecondToTime($total).'</td><td>&nbsp;</td><td>&nbsp;</td>';
 		print '</tr>';
 	}
-
+	
 	print '</table>';
 	print "</form>\n";
 	$db->free($result);

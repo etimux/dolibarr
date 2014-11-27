@@ -218,7 +218,7 @@ if ($action == 'add')
 		{
 			if ($i == 0)	// First entry
 			{
-				if ($value['id'] > 0) $usertodo->fetch($value['id']);
+				if ($value['id'] > 0) $object->userownerid=$value['id'];
 				$object->transparency = (GETPOST("transparency")=='on'?1:0);
 			}
 
@@ -251,11 +251,11 @@ if ($action == 'add')
 	if (! empty($conf->phenix->enabled) && GETPOST('add_phenix') == 'on') $object->use_phenix=1;
 
 	// Check parameters
-	if (empty($object->userownerid))
+	if (empty($object->userownerid) && empty($_SESSION['assignedtouser']))
 	{
 		$error++; $donotclearsession=1;
 		$action = 'create';
-		setEventMessage($langs->trans("ErrorFieldRequired",$langs->transnoentitiesnoconv("ActionAffectedTo")), 'errors');
+		setEventMessage($langs->trans("ErrorFieldRequired",$langs->transnoentitiesnoconv("ActionsOwnedBy")), 'errors');
 	}
 	if ($object->type_code == 'AC_RDV' && ($datep == '' || ($datef == '' && empty($fulldayevent))))
 	{
@@ -287,19 +287,22 @@ if ($action == 'add')
 			{
 				unset($_SESSION['assignedtouser']);
 
+				$moreparam='';
+				if ($user->id != $object->ownerid) $moreparam="usertodo=-1";	// We force to remove filter so created record is visible when going back to per user view.
+
 				$db->commit();
 				if (! empty($backtopage))
 				{
-					dol_syslog("Back to ".$backtopage);
-					header("Location: ".$backtopage);
+					dol_syslog("Back to ".$backtopage.($moreparam?(preg_match('/\?/',$backtopage)?'&'.$moreparam:'?'.$moreparam):''));
+					header("Location: ".$backtopage.($moreparam?(preg_match('/\?/',$backtopage)?'&'.$moreparam:'?'.$moreparam):''));
 				}
 				elseif($idaction)
 				{
-					header("Location: ".DOL_URL_ROOT.'/comm/action/card.php?id='.$idaction);
+					header("Location: ".DOL_URL_ROOT.'/comm/action/card.php?id='.$idaction.($moreparam?'&'.$moreparam:''));
 				}
 				else
 				{
-					header("Location: ".DOL_URL_ROOT.'/comm/action/index.php');
+					header("Location: ".DOL_URL_ROOT.'/comm/action/index.php'.($moreparam?'?'.$moreparam:''));
 				}
 				exit;
 			}
@@ -377,8 +380,6 @@ if ($action == 'update')
 
 		// Users
 		$listofuserid=array();
-		$assignedtouser=(! empty($object->userownerid) && $object->userownerid > 0 ? $object->userownerid : 0);
-		if ($assignedtouser) $listofuserid[$assignedtouser]=array('id'=>$assignedtouser, 'mandatory'=>0, 'transparency'=>($user->id == $assignedtouser ? $transparency : ''));	// Owner first
 		if (! empty($_SESSION['assignedtouser']))	// Now concat assigned users
 		{
 			// Restore array with key with same value than param 'id'
@@ -388,11 +389,18 @@ if ($action == 'update')
 				if ($val['id'] > 0 && $val['id'] != $assignedtouser) $listofuserid[$val['id']]=$val;
 			}
 		}
+		else {
+			$assignedtouser=(! empty($object->userownerid) && $object->userownerid > 0 ? $object->userownerid : 0);
+			if ($assignedtouser) $listofuserid[$assignedtouser]=array('id'=>$assignedtouser, 'mandatory'=>0, 'transparency'=>($user->id == $assignedtouser ? $transparency : ''));	// Owner first
+		}
 
-		$object->userassigned=array();	// Clear old content
+		$object->userassigned=array();	$object->userownerid=0; // Clear old content
+		$i=0;
 		foreach($listofuserid as $key => $val)
 		{
+			if ($i == 0) $object->userownerid = $val['id'];
 			$object->userassigned[$val['id']]=array('id'=>$val['id'], 'mandatory'=>0, 'transparency'=>($user->id == $val['id'] ? $transparency : ''));
+			$i++;
 		}
 
 		if (! empty($conf->global->AGENDA_ENABLE_DONEBY))
@@ -415,7 +423,7 @@ if ($action == 'update')
 		{
 			$error++; $donotclearsession=1;
 			$action = 'edit';
-			setEventMessage($langs->trans("ErrorFieldRequired",$langs->transnoentitiesnoconv("ActionAffectedTo")), 'errors');
+			setEventMessage($langs->trans("ErrorFieldRequired",$langs->transnoentitiesnoconv("ActionsOwnedBy")), 'errors');
 		}
 
 		// Fill array 'array_options' with data from add form
@@ -782,11 +790,11 @@ if ($id > 0)
 {
 	$result1=$object->fetch($id);
 	$result2=$object->fetch_thirdparty();
-	$result2=$object->fetch_contact();
-	$result3=$object->fetch_userassigned();
-	$result4=$object->fetch_optionals($id,$extralabels);
+	$result3=$object->fetch_contact();
+	$result4=$object->fetch_userassigned();
+	$result5=$object->fetch_optionals($id,$extralabels);
 
-	if ($result1 < 0 || $result2 < 0 || $result3 < 0 || $result4 < 0)
+	if ($result1 < 0 || $result2 < 0 || $result3 < 0 || $result4 < 0 || $result5 < 0)
 	{
 		dol_print_error($db,$object->error);
 		exit;
@@ -1068,7 +1076,7 @@ if ($id > 0)
 		$listofuserid=array();
 		if (empty($donotclearsession))
 		{
-			if (is_object($object->userownerid)) $listofuserid[$object->userownerid]=array('id'=>$object->userownerid,'transparency'=>$object->transparency);	// Owner first
+			if ($object->userownerid > 0) $listofuserid[$object->userownerid]=array('id'=>$object->userownerid,'transparency'=>$object->transparency);	// Owner first
 			if (! empty($object->userassigned))	// Now concat assigned users
 			{
 				// Restore array with key with same value than param 'id'
