@@ -788,6 +788,8 @@ class Commande extends CommonOrder
 
                     if (! $error)
                     {
+                    	$action='create';
+
 	                    // Actions on extra fields (by external module or standard code)
 	                    // FIXME le hook fait double emploi avec le trigger !!
 	                    $hookmanager->initHooks(array('orderdao'));
@@ -985,7 +987,12 @@ class Commande extends CommonOrder
 				$line->marge_tx			= $marginInfos[1];
 				$line->marque_tx		= $marginInfos[2];
 
-                $this->lines[$i] = $line;
+                // get extrafields from original line
+				$object->lines[$i]->fetch_optionals($object->lines[$i]->rowid);
+				foreach($object->lines[$i]->array_options as $options_key => $value)
+					$line->array_options[$options_key] = $value;
+
+				$this->lines[$i] = $line;
             }
 
             $this->socid                = $object->socid;
@@ -1005,6 +1012,11 @@ class Commande extends CommonOrder
 
             $this->origin				= $object->element;
             $this->origin_id			= $object->id;
+
+            // get extrafields from original line
+			$object->fetch_optionals($object->id);
+			foreach($object->array_options as $options_key => $value)
+				$this->array_options[$options_key] = $value;
 
             // Possibility to add external linked objects with hooks
             $this->linked_objects[$this->origin] = $this->origin_id;
@@ -1186,7 +1198,15 @@ class Commande extends CommonOrder
             $this->line->date_end=$date_end;
 
 			// infos marge
-			$this->line->fk_fournprice = $fk_fournprice;
+			if (!empty($fk_product) && empty($fk_fournprice) && empty($pa_ht)) {
+			    // by external module, take lowest buying price
+			    include_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.product.class.php';
+			    $productFournisseur = new ProductFournisseur($this->db);
+			    $productFournisseur->find_min_price_product_fournisseur($fk_product);
+			    $this->line->fk_fournprice = $productFournisseur->product_fourn_price_id;
+			} else {
+			    $this->line->fk_fournprice = $fk_fournprice;
+			}
 			$this->line->pa_ht = $pa_ht;
 
             // TODO Ne plus utiliser
@@ -2384,7 +2404,15 @@ class Commande extends CommonOrder
             $this->line->skip_update_total=$skip_update_total;
 
 			// infos marge
-			$this->line->fk_fournprice = $fk_fournprice;
+			if (!empty($fk_product) && empty($fk_fournprice) && empty($pa_ht)) {
+			    //by external module, take lowest buying price
+			    include_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.product.class.php';
+			    $productFournisseur = new ProductFournisseur($this->db);
+			    $productFournisseur->find_min_price_product_fournisseur($fk_product);
+			    $this->line->fk_fournprice = $productFournisseur->product_fourn_price_id;
+			} else {
+			    $this->line->fk_fournprice = $fk_fournprice;
+			}
 			$this->line->pa_ht = $pa_ht;
 
             // TODO deprecated
@@ -2903,6 +2931,8 @@ class Commande extends CommonOrder
      */
     function update_extrafields($user)
     {
+    	$action='create';
+
     	// Actions on extra fields (by external module or standard code)
     	// FIXME le hook fait double emploi avec le trigger !!
     	$hookmanager->initHooks(array('orderdao'));
@@ -3255,7 +3285,7 @@ class OrderLine extends CommonOrderLine
 
 		$error=0;
 
-        dol_syslog("OrderLine::insert rang=".$this->rang);
+        dol_syslog(get_class($this)."::insert rang=".$this->rang);
 
         // Clean parameters
         if (empty($this->tva_tx)) $this->tva_tx=0;

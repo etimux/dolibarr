@@ -65,7 +65,7 @@ $extralabels=$extrafields->fetch_name_optionals_label($object->table_element);
 // Get object canvas (By default, this is not defined, so standard usage of dolibarr)
 $object->getCanvas($socid);
 $canvas = $object->canvas?$object->canvas:GETPOST("canvas");
-$objcanvas='';
+$objcanvas=null;
 if (! empty($canvas))
 {
     require_once DOL_DOCUMENT_ROOT.'/core/class/canvas.class.php';
@@ -782,16 +782,18 @@ else
             print '<div class="hideonsmartphone float">';
             print $langs->trans("ThirdPartyType").': &nbsp; &nbsp; ';
             print '</div>';
-            print '<input type="radio" id="radiocompany" class="flat" name="private"  value="0"'.($private?'':' checked="checked"').'>';
 	        print '<label for="radiocompany">';
+            print '<input type="radio" id="radiocompany" class="flat" name="private"  value="0"'.($private?'':' checked="checked"').'>';
 	        print '&nbsp;';
             print $langs->trans("Company/Fundation");
 	        print '</label>';
             print ' &nbsp; &nbsp; ';
+	        print '<label for="radioprivate">';
             print '<input type="radio" id="radioprivate" class="flat" name="private" value="1"'.($private?' checked="checked"':'').'>';
 	        print '&nbsp;';
             print $langs->trans("Individual");
-            print ' ('.$langs->trans("ToCreateContactWithSameName").')';
+            print '<div class="hideonsmartphone">('.$langs->trans("ToCreateContactWithSameName").')</div>';
+            print '</label>';
             print '</div>';
             print "<br>\n";
         }
@@ -1727,7 +1729,7 @@ else
         // Status
         print '<tr><td>'.$langs->trans("Status").'</td>';
         print '<td colspan="'.(2+(($showlogo || $showbarcode)?0:1)).'">';
-        if (! empty($conf->use_javascript_ajax) && $user->rights->societe->creer) {
+        if (! empty($conf->use_javascript_ajax) && $user->rights->societe->creer && ! empty($conf->global->MAIN_DIRECT_STATUS_UPDATE)) {
             print ajax_object_onoff($object, 'status', 'status', 'InActivity', 'ActivityCeased');
         } else {
             print $object->getLibStatut(2);

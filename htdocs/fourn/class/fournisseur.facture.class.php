@@ -121,7 +121,7 @@ class FactureFournisseur extends CommonInvoice
      */
     function create($user)
     {
-        global $langs,$conf;
+        global $langs,$conf,$hookmanager;
 
 		$error=0;
         $now=dol_now();
@@ -230,6 +230,8 @@ class FactureFournisseur extends CommonInvoice
             $result=$this->update_price();
             if ($result > 0)
             {
+            	$action='create';
+
 				// Actions on extra fields (by external module or standard code)
 				// FIXME le hook fait double emploi avec le trigger !!
 				$hookmanager->initHooks(array('supplierinvoicedao'));
@@ -514,7 +516,7 @@ class FactureFournisseur extends CommonInvoice
      *  @param  int		$notrigger       0=launch triggers after, 1=disable triggers
      *  @return int 			         <0 if KO, >0 if OK
      */
-    function update($user=0, $notrigger=0)
+    function update($user=null, $notrigger=0)
     {
         global $conf, $langs;
         $error=0;

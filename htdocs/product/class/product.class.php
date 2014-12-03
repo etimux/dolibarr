@@ -680,6 +680,8 @@ class Product extends CommonObject
 					}
 				}
 
+				$action='update';
+
 				// Actions on extra fields (by external module or standard code)
 				$hookmanager->initHooks(array('productdao'));
 				$parameters=array('id'=>$this->id);
@@ -1396,7 +1398,7 @@ class Product extends CommonObject
 		if (! $id && ! $ref && ! $ref_ext)
 		{
 			$this->error='ErrorWrongParameters';
-			dol_print_error(get_class($this)."::fetch ".$this->error, LOG_ERR);
+			dol_print_error(get_class($this)."::fetch ".$this->error);
 			return -1;
 		}
 
@@ -3032,42 +3034,56 @@ class Product extends CommonObject
 	 *
 	 *    @return     int             < 0 if KO, > 0 if OK
 	 */
-	function load_virtual_stock()
-	{
-		global $conf;
+    function load_virtual_stock()
+    {
+        global $conf;
 
-		if (! empty($conf->global->STOCK_CALCULATE_ON_SHIPMENT))
-		{
-			$stock_commande_client=$stock_commande_fournisseur=0;
-			$stock_sending_client=$stock_reception_fournisseur=0;
+        $stock_commande_client=0;
+        $stock_commande_fournisseur=0;
+        $stock_sending_client=0;
+        $stock_reception_fournisseur=0;
 
-			if (! empty($conf->commande->enabled))
-			{
-				$result=$this->load_stats_commande(0,'1,2');
-				if ($result < 0) dol_print_error($db,$this->error);
-				$stock_commande_client=$this->stats_commande['qty'];
-			}
-			if (! empty($conf->expedition->enabled))
-			{
-				$result=$this->load_stats_sending(0,'1,2');
-				if ($result < 0) dol_print_error($db,$this->error);
-				$stock_sending_client=$this->stats_expedition['qty'];
-			}
-			if (! empty($conf->fournisseur->enabled))
-			{
-				$result=$this->load_stats_commande_fournisseur(0,'3');
-				if ($result < 0) dol_print_error($db,$this->error);
-				$stock_commande_fournisseur=$this->stats_commande_fournisseur['qty'];
+        if (! empty($conf->commande->enabled)) {
+            $result=$this->load_stats_commande(0,'1,2');
+            if ($result < 0) dol_print_error($db,$this->error);
+            $stock_commande_client=$this->stats_commande['qty'];
+        }
+        if (! empty($conf->expedition->enabled)) {
+            $result=$this->load_stats_sending(0,'1,2');
+            if ($result < 0) dol_print_error($db,$this->error);
+            $stock_sending_client=$this->stats_expedition['qty'];
+        }
+        if (! empty($conf->fournisseur->enabled)) {
+            $result=$this->load_stats_commande_fournisseur(0,'3,4');
+            if ($result < 0) dol_print_error($db,$this->error);
+            $stock_commande_fournisseur=$this->stats_commande_fournisseur['qty'];
 
-				$result=$this->load_stats_reception(0,'3');
-				if ($result < 0) dol_print_error($db,$this->error);
-				$stock_reception_fournisseur=$this->stats_reception['qty'];
-			}
+            $result=$this->load_stats_reception(0,'4');
+            if ($result < 0) dol_print_error($db,$this->error);
+            $stock_reception_fournisseur=$this->stats_reception['qty'];
+        }
 
-			$this->stock_theorique=$this->stock_reel-($stock_commande_client-$stock_sending_client)+($stock_commande_fournisseur-$stock_reception_fournisseur);
-			//echo $this->stock_theorique.' = '.$this->stock_reel.' - ('.$stock_commande_client.' - '.$stock_sending_client.') + ('.$stock_commande_fournisseur.' - '.$stock_reception_fournisseur.')';
-		}
-	}
+        // Stock decrease mode
+        if (! empty($conf->global->STOCK_CALCULATE_ON_SHIPMENT)) {
+            $this->stock_theorique=$this->stock_reel-$stock_commande_client+$stock_sending_client;
+        }
+        if (! empty($conf->global->STOCK_CALCULATE_ON_VALIDATE_ORDER)) {
+            $this->stock_theorique=$this->stock_reel;
+        }
+        if (! empty($conf->global->STOCK_CALCULATE_ON_BILL)) {
+            $this->stock_theorique=$this->stock_reel-$stock_commande_client;
+        }
+        // Stock Increase mode
+        if (! empty($conf->global->STOCK_CALCULATE_ON_SUPPLIER_DISPATCH_ORDER)) {
+            $this->stock_theorique+=$stock_commande_fournisseur-$stock_reception_fournisseur;
+        }
+        if (! empty($conf->global->STOCK_CALCULATE_ON_SUPPLIER_VALIDATE_ORDER)) {
+            $this->stock_theorique-=$stock_reception_fournisseur;
+        }
+        if (! empty($conf->global->STOCK_CALCULATE_ON_SUPPLIER_BILL)) {
+            $this->stock_theorique+=$stock_commande_fournisseur-$stock_reception_fournisseur;
+        }
+    }
 
 	/**
 	 *  Move an uploaded file described into $file array into target directory $sdir.
@@ -3233,11 +3249,11 @@ class Product extends CommonObject
     						$alt.=' - '.$langs->transnoentitiesnoconv('Size').': '.$imgarray['width'].'x'.$imgarray['height'];
     						if ($photo_vignette && $imgarray['height'] > $maxHeight) {
     							$return.= '<!-- Show thumb -->';
-    							$return.= '<img class="photo photowithmargin" border="0" height="'.$maxHeight.'" src="'.DOL_URL_ROOT.'/viewimage.php?modulepart=product&entity='.$this->entity.'&file='.urlencode($pdirthumb.$photo_vignette).'" title="'.dol_escape_htmltag($alt).'">';
+    							$return.= '<img class="photo photowithmargin" border="0" '.($conf->dol_use_jmobile?'max-height':'height').'="'.$maxHeight.'" src="'.DOL_URL_ROOT.'/viewimage.php?modulepart=product&entity='.$this->entity.'&file='.urlencode($pdirthumb.$photo_vignette).'" title="'.dol_escape_htmltag($alt).'">';
     						}
     						else {
     							$return.= '<!-- Show original file -->';
-    							$return.= '<img class="photo photowithmargin" border="0" height="'.$maxHeight.'" src="'.DOL_URL_ROOT.'/viewimage.php?modulepart=product&entity='.$this->entity.'&file='.urlencode($pdir.$photo).'" title="'.dol_escape_htmltag($alt).'">';
+    							$return.= '<img class="photo photowithmargin" border="0" '.($conf->dol_use_jmobile?'max-height':'height').'="'.$maxHeight.'" src="'.DOL_URL_ROOT.'/viewimage.php?modulepart=product&entity='.$this->entity.'&file='.urlencode($pdir.$photo).'" title="'.dol_escape_htmltag($alt).'">';
     						}
 
     						$return.= '</a>'."\n";
