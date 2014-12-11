@@ -82,8 +82,9 @@ For users:
 - New: Add dunning into accountancy report.
 - New: Add favorite button into country dictionary to put value on top select list
 - Upgrade phpexcel lib to 1.7.8
-- New : Use of MAIN_USE_FILECACHE_EXPORT_EXCEL_DIR to use disk cache for big excel export
-- New : Option on extrafields to have them always editable regardless of the document status
+- New : Use of MAIN_USE_FILECACHE_EXPORT_EXCEL_DIR to use disk cache for big excel export.
+- New : Option on extrafields to have them always editable regardless of the document status.
+- New : New module PrintIPP to print without opening document is available as stable.
 - Fix: [ bug #1487 ] PAYMENT_DELETE trigger does not intercept trigger action
 - Fix: [ bug #1470, #1472, #1473] User trigger problem
 - Fix: [ bug #1489, #1491 ] Intervention trigger problem
@@ -102,6 +103,7 @@ For users:
 - Fix: [ bug #1469 ] Triggers CONTACT_MODIFY and CONTACT_DELETE duplicates error message
 - Fix: [ bug #1537 ] Difference between societe.nom and adherent.societe.
 - Fix: [ bug #1535 ] Supplier invoice Extrafields are not shown
+- Fix: datepicker first day of week can be monday by setting into display setup
 
 For users, new experimental module (need to set feature level of instance to experimental to see them):
 - New: Module Accounting Expert to manage accountancy
@@ -321,6 +323,14 @@ removed. You must now use the 6 parameters way. See file modMyModule.class.php f
 
 ***** ChangeLog for 3.5.6 compared to 3.5.5 *****
 Fix: Avoid missing class error for fetch_thirdparty method #1973
+Fix: Can't update phone_pro from web service
+Fix: Some security holes.
+Fix: copy extrafields when creating order from proposal.
+Fix: report on action was not filtering by environment.
+Fix: Avoid missing class error.
+Fix: Add function dolEscapeXML.
+Fix: Bad days and month reported by function.
+Fix: Bad margin calculation.
 
 ***** ChangeLog for 3.5.5 compared to 3.5.4 *****
 Fix: Holiday module was broken. Initializaion of amount of holidays failed.
