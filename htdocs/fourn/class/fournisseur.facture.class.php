@@ -43,6 +43,15 @@ class FactureFournisseur extends CommonInvoice
     public $fk_element='fk_facture_fourn';
     protected $ismultientitymanaged = 1;	// 0=No test on entity, 1=Test with field entity, 2=Test with link by societe
 
+<<<<<<< HEAD
+=======
+    /**
+     * {@inheritdoc}
+     */
+    protected $table_ref_field = 'ref';
+
+    var $rowid;
+>>>>>>> upstream/3.7
     var $ref;
     var $product_ref;
     var $ref_supplier;
@@ -1467,7 +1476,7 @@ class FactureFournisseur extends CommonInvoice
       *      Return next reference of supplier invoice not already used (or last reference)
       *      according to numbering module defined into constant INVOICE_SUPPLIER_ADDON_NUMBER
       *
-      *      @param	   Society		$soc		object company
+      *      @param	   Societe		$soc		Thirdparty object
       *      @param    string		$mode		'next' for next value or 'last' for last value
       *      @return   string					free ref or last ref
       */

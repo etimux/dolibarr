@@ -44,6 +44,11 @@ class Contrat extends CommonObject
 	public $fk_element='fk_contrat';
 	protected $ismultientitymanaged = 1;	// 0=No test on entity, 1=Test with field entity, 2=Test with link by societe
 
+	/**
+	 * {@inheritdoc}
+	 */
+	protected $table_ref_field = 'ref';
+
 	var $id;
 	var $ref;
 	var $ref_ext;
@@ -88,7 +93,7 @@ class Contrat extends CommonObject
 	/**
 	 *	Return next contract ref
 	 *
-	 *	@param	Societe		$soc		objet society
+	 *	@param	Societe		$soc		Thirdparty object
 	 *	@return string					free reference for contract
 	 */
 	function getNextNumRef($soc)
@@ -1440,6 +1445,7 @@ class Contrat extends CommonObject
 	 *
 	 *	@param	User	$user		Object user
 	 *	@return int     			<0 if KO, >0 if OK
+	 *  @deprecated					This function will never be used. Status of a contract is status of its lines.
 	 */
 	function update_statut($user)
 	{
