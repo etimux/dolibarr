@@ -1,6 +1,5 @@
 # ProductBATCH language file - en_US - ProductBATCH
-CHARSET= UTF-8
-ManageLotSerial=Manage lot or serial
+ManageLotSerial=Manage batch/serial
 ProductStatusOnBatch=Managed
 ProductStatusNotOnBatch=Not Managed
 ProductStatusOnBatchShort=Managed

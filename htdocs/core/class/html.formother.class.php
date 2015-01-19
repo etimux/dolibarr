@@ -311,15 +311,25 @@ class FormOther
      */
     function select_categories($type,$selected=0,$htmlname='search_categ',$nocateg=0)
     {
-        global $langs;
+        global $conf, $langs;
         require_once DOL_DOCUMENT_ROOT.'/categories/class/categorie.class.php';
 
         // Load list of "categories"
         $static_categs = new Categorie($this->db);
         $tab_categs = $static_categs->get_full_arbo($type);
 
+        $moreforfilter = '';
+        $nodatarole = '';
+        // Enhance with select2
+        if ($conf->use_javascript_ajax)
+        {
+            include_once DOL_DOCUMENT_ROOT . '/core/lib/ajax.lib.php';
+            $moreforfilter.= ajax_combobox('select_categ_'.$htmlname);
+            $nodatarole=' data-role="none"';
+        }
+
         // Print a select with each of them
-        $moreforfilter ='<select class="flat" id="select_categ_'.$htmlname.'" name="'.$htmlname.'">';
+        $moreforfilter.='<select class="flat" id="select_categ_'.$htmlname.'" name="'.$htmlname.'"'.$nodatarole.'>';
         $moreforfilter.='<option value="">&nbsp;</option>';	// Should use -1 to say nothing
 
         if (is_array($tab_categs))
@@ -349,9 +359,10 @@ class FormOther
      *  @param  string	$htmlname      	Name of combo list (example: 'search_sale')
      *  @param  User	$user           Object user
      *  @param	int		$showstatus		0=show user status only if status is disabled, 1=always show user status into label, -1=never show user status
+     *  @param	int		$showempty		1=show also an empty value
      *  @return string					Html combo list code
      */
-    function select_salesrepresentatives($selected,$htmlname,$user,$showstatus=0)
+    function select_salesrepresentatives($selected,$htmlname,$user,$showstatus=0,$showempty=1)
     {
         global $conf,$langs;
         $langs->load('users');
@@ -367,7 +378,7 @@ class FormOther
         }
         // Select each sales and print them in a select input
         $out.='<select class="flat" id="'.$htmlname.'" name="'.$htmlname.'"'.$nodatarole.'>';
-        $out.='<option value="">&nbsp;</option>';
+        if ($showempty) $out.='<option value="-1">&nbsp;</option>';
 
         // Get list of users allowed to be viewed
         $sql_usr = "SELECT u.rowid, u.lastname, u.firstname, u.statut, u.login";

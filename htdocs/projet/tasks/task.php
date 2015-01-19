@@ -374,7 +374,7 @@ if ($id > 0 || ! empty($ref))
 			print '<div align="center">';
 			print '<input type="submit" class="button" name="update" value="'.$langs->trans("Modify").'"> &nbsp; ';
 			print '<input type="submit" class="button" name="cancel" value="'.$langs->trans("Cancel").'">';
-			print '<div>';
+			print '</div>';
 
 			print '</form>';
 		}

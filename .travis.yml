@@ -18,6 +18,7 @@ php:
  - "5.3"
  - "5.4"
  - "5.5" 
+ - "5.6"
 
 env:
  - DB=mysql
@@ -32,10 +33,12 @@ before_script:
 # - echo Update composer
 # - ~/.phpenv/versions/$(phpenv version-name)/bin/composer.phar self-update 
  - echo PHPUnit version
+ - which phpunit
  - phpunit --version
  - echo Install phpcs then show installed rules
  - pyrus install pear/PHP_CodeSniffer
  - phpenv rehash
+ - which phpcs
  - phpcs --version
  - phpcs -i
  - echo Create dir $(pwd)/htdocs/documents
@@ -84,6 +87,8 @@ before_script:
  - sudo cat /etc/apache2/sites-available/default
  - sudo /etc/init.d/apache2 restart
  - wget http://localhost/
+ - sudo cat /etc/apache2/envvars
+ - sudo cat /var/log/apache2/error.log
  - cat index.html
 
 
@@ -98,6 +103,8 @@ script:
  - php upgrade.php 3.6.0 3.7.0 >> upgrade.log
 # - cat upgrade360370.log
  - php upgrade2.php 3.6.0 3.7.0 >> upgrade2.log
+ - php upgrade.php 3.7.0 3.8.0 >> upgrade.log
+ - php upgrade2.php 3.7.0 3.8.0 >> upgrade2.log
 # - cat upgrade2.log
  - cd ../..
  - date

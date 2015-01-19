@@ -1053,7 +1053,7 @@ else
             print '<br>';
         //}
 
-        print '<center><input type="submit" class="button" value="'.$langs->trans("Create").'"></center>';
+        print '<div class="center"><input type="submit" class="button" value="'.$langs->trans("Create").'"></div>';
 
         print '</form>';
     }
@@ -1289,8 +1289,11 @@ else
                 print '<br>';
             //}
 
-            print '<center><input type="submit" class="button" value="'.$langs->trans("Save").'"> &nbsp; &nbsp; ';
-            print '<input type="submit" class="button" name="cancel" value="'.$langs->trans("Cancel").'"></center>';
+            print '<div class="center">';
+			print '<input type="submit" class="button" value="'.$langs->trans("Save").'">';
+			print '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+            print '<input type="submit" class="button" name="cancel" value="'.$langs->trans("Cancel").'">';
+			print '</div>';
 
             print '</form>';
         }
@@ -1544,7 +1547,9 @@ else
             }
 
             // Note
-            print '<tr><td valign="top">'.$langs->trans("Note").'</td><td colspan="'.(2+(($showphoto||$showbarcode)?1:0)).'">'.(dol_textishtml($object->note)?$object->note:dol_nl2br($object->note,1,true)).'</td></tr>';
+            print '<!-- show Note --> '."\n";
+            print '<tr><td valign="top">'.$langs->trans("Note").'</td><td colspan="'.(2+(($showphoto||$showbarcode)?1:0)).'">'.(dol_textishtml($object->note)?$object->note:dol_nl2br($object->note,1,true)).'</td></tr>'."\n";
+            print '<!-- End show Note --> '."\n";
 
             print "</table>\n";
 

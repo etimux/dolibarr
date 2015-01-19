@@ -6,7 +6,7 @@
  * Copyright (C) 2005-2009 Regis Houssin        <regis.houssin@capnetworks.com>
  * Copyright (C) 2013      Cédric Salvador      <csalvador.gpcsolutions.fr>
  * Copyright (C) 2013      Juanjo Menent	    <jmenent@2byte.es>
- * Copyright (C) 2014      Cédric Gross         <c.gross@kreiz-it.fr>
+ * Copyright (C) 2014-2015 Cédric Gross         <c.gross@kreiz-it.fr>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@
 require '../../main.inc.php';
 require_once DOL_DOCUMENT_ROOT.'/product/stock/class/entrepot.class.php';
 require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.product.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/product.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/product/class/html.formproduct.class.php';
 if (! empty($conf->productbatch->enabled)) require_once DOL_DOCUMENT_ROOT.'/product/class/productbatch.class.php';
@@ -170,13 +171,13 @@ if ($action == "correct_stock" && ! $cancel)
 // Transfer stock from a warehouse to another warehouse
 if ($action == "transfert_stock" && ! $cancel)
 {
-	if (! (GETPOST("id_entrepot_source") > 0) || ! (GETPOST("id_entrepot_destination") > 0))
+	if (! (GETPOST("id_entrepot_source",'int') > 0) || ! (GETPOST("id_entrepot_destination",'int') > 0))
 	{
 		setEventMessage($langs->trans("ErrorFieldRequired",$langs->transnoentitiesnoconv("Warehouse")), 'errors');
 		$error++;
 		$action='transfert';
 	}
-	if (! GETPOST("nbpiece"))
+	if (! GETPOST("nbpiece",'int'))
 	{
 		setEventMessage($langs->trans("ErrorFieldRequired",$langs->transnoentitiesnoconv("NumberOfUnit")), 'errors');
 		$error++;
@@ -185,9 +186,9 @@ if ($action == "transfert_stock" && ! $cancel)
 
 	if (! $error)
 	{
-		if (GETPOST("id_entrepot_source") <> GETPOST("id_entrepot_destination"))
+		if (GETPOST("id_entrepot_source",'int') <> GETPOST("id_entrepot_destination",'int'))
 		{
-			if (is_numeric(GETPOST("nbpiece")) && $id)
+			if (GETPOST("nbpiece",'int') && $id)
 			{
 				$product = new Product($db);
 				$result=$product->fetch($id);
@@ -198,31 +199,63 @@ if ($action == "transfert_stock" && ! $cancel)
 
 				// Define value of products moved
 				$pricesrc=0;
-				if (isset($product->stock_warehouse[GETPOST("id_entrepot_source")]->pmp)) $pricesrc=$product->stock_warehouse[GETPOST("id_entrepot_source")]->pmp;
+				//if (isset($product->stock_warehouse[GETPOST("id_entrepot_source")]->pmp)) $pricesrc=$product->stock_warehouse[GETPOST("id_entrepot_source")]->pmp;
+				if (isset($product->pmp)) $pricesrc=$product->pmp;
 				$pricedest=$pricesrc;
 
-				//print 'price src='.$pricesrc.', price dest='.$pricedest;exit;
+				$pdluoid=GETPOST('pdluoid','int');
 
-				// Remove stock
-				$result1=$product->correct_stock(
-	    			$user,
-	    			GETPOST("id_entrepot_source"),
-	    			GETPOST("nbpiece"),
-	    			1,
-	    			GETPOST("label"),
-	    			$pricesrc
-				);
+				if ($pdluoid>0)
+				{
+				    $pdluo = new Productbatch($db);
+				    $result=$pdluo->fetch($pdluoid);
 
-				// Add stock
-				$result2=$product->correct_stock(
-	    			$user,
-	    			GETPOST("id_entrepot_destination"),
-	    			GETPOST("nbpiece"),
-	    			0,
-	    			GETPOST("label"),
-	    			$pricedest
-				);
+				    if ($result>0 && $pdluo->id)
+				    {
+                        // Remove stock
+                        $result1=$product->correct_stock_batch(
+				            $user,
+				            $pdluo->warehouseid,
+				            GETPOST("nbpiece",'int'),
+				            1,
+				            GETPOST("label",'san_alpha'),
+				            $pricesrc,
+				            $pdluo->eatby,$pdluo->sellby,$pdluo->batch
+				        );
+                        // Add stock
+                        $result2=$product->correct_stock_batch(
+                            $user,
+                            GETPOST("id_entrepot_destination",'int'),
+                            GETPOST("nbpiece",'int'),
+                            0,
+                            GETPOST("label",'san_alpha'),
+                            $pricedest,
+                            $pdluo->eatby,$pdluo->sellby,$pdluo->batch
+                        );
+				    }
+				}
+				else
+				{
+                    // Remove stock
+                    $result1=$product->correct_stock(
+                        $user,
+                        GETPOST("id_entrepot_source"),
+                        GETPOST("nbpiece"),
+                        1,
+                        GETPOST("label"),
+                        $pricesrc
+                    );
 
+                    // Add stock
+                    $result2=$product->correct_stock(
+                        $user,
+                        GETPOST("id_entrepot_destination"),
+                        GETPOST("nbpiece"),
+                        0,
+                        GETPOST("label"),
+                        $pricedest
+                    );
+				}
 				if ($result1 >= 0 && $result2 >= 0)
 				{
 					$db->commit();
@@ -238,6 +271,48 @@ if ($action == "transfert_stock" && ! $cancel)
 		}
 	}
 }
+
+// Update batch information
+if ($action == 'updateline' && GETPOST('save') == $langs->trans('Save'))
+{
+
+    $pdluo = new Productbatch($db);
+    $result=$pdluo->fetch(GETPOST('pdluoid','int'));
+
+    if ($result>0)
+    {
+        if ($pdluo->id)
+        {
+            if ((! GETPOST("sellby")) && (! GETPOST("eatby")) && (! GETPOST("batch_number"))) {
+                setEventMessage($langs->trans("ErrorFieldRequired",$langs->transnoentitiesnoconv("atleast1batchfield")), 'errors');
+            }
+            else
+            {
+                $d_eatby=dol_mktime(12, 0, 0, $_POST['eatbymonth'], $_POST['eatbyday'], $_POST['eatbyyear']);
+                $d_sellby=dol_mktime(12, 0, 0, $_POST['sellbymonth'], $_POST['sellbyday'], $_POST['sellbyyear']);
+                $pdluo->batch=GETPOST("batch_number",'san_alpha');
+                $pdluo->eatby=$d_eatby;
+                $pdluo->sellby=$d_sellby;
+                $result=$pdluo->update($user);
+                if ($result<0)
+                {
+                    setEventMessages($pdluo->error,$pdluo->errors, 'errors');
+                }
+            }
+        }
+        else
+        {
+            setEventMessages($langs->trans('BatchInformationNotfound'),null, 'errors');
+        }
+    }
+    else
+    {
+        setEventMessages($pdluo->error,null, 'errors');
+    }
+    header("Location: product.php?id=".$id);
+    exit;
+}
+
 
 
 /*
@@ -309,13 +384,50 @@ if ($id > 0 || $ref)
 		print '<td>'.price($product->pmp).' '.$langs->trans("HT").'</td>';
 		print '</tr>';
 
-        // Sell price
-        print '<tr><td>'.$langs->trans("SellPriceMin").'</td>';
-        print '<td>';
-		if (empty($conf->global->PRODUIT_MULTIPRICES)) print price($product->price).' '.$langs->trans("HT");
-        else print $langs->trans("Variable");
-        print '</td>';
-        print '</tr>';
+		// Minimum Price
+		print '<tr><td>'.$langs->trans("BuyingPriceMin").'</td>';
+		print '<td colspan="2">';
+		$product_fourn = new ProductFournisseur($db);
+		if ($product_fourn->find_min_price_product_fournisseur($product->id) > 0)
+		{
+			if ($product_fourn->product_fourn_price_id > 0) print $product_fourn->display_price_product_fournisseur();
+			else print $langs->trans("NotDefined");
+		}
+		print '</td></tr>';
+
+		$object = $product;
+		if (empty($conf->global->PRODUIT_MULTIPRICES))
+		{
+			// Price
+			print '<tr><td>' . $langs->trans("SellingPrice") . '</td><td>';
+			if ($object->price_base_type == 'TTC') {
+				print price($object->price_ttc) . ' ' . $langs->trans($object->price_base_type);
+			} else {
+				print price($object->price) . ' ' . $langs->trans($object->price_base_type);
+			}
+			print '</td></tr>';
+
+			// Price minimum
+			print '<tr><td>' . $langs->trans("MinPrice") . '</td><td>';
+			if ($object->price_base_type == 'TTC') {
+				print price($object->price_min_ttc) . ' ' . $langs->trans($object->price_base_type);
+			} else {
+				print price($object->price_min) . ' ' . $langs->trans($object->price_base_type);
+			}
+			print '</td></tr>';
+		}
+		else
+		{
+			// Price
+			print '<tr><td>' . $langs->trans("SellingPrice") . '</td><td>';
+			print $langs->trans("Variable");
+			print '</td></tr>';
+
+			// Price minimum
+			print '<tr><td>' . $langs->trans("MinPrice") . '</td><td>';
+			print $langs->trans("Variable");
+			print '</td></tr>';
+		}
 
         // Stock
         print '<tr><td>'.$form->editfieldkey("StockLimit",'stocklimit',$product->seuil_stock_alerte,$product,$user->rights->produit->creer).'</td><td colspan="2">';
@@ -489,8 +601,11 @@ if ($id > 0 || $ref)
 		}
 		print '</table>';
 
-		print '<center><input type="submit" class="button" value="'.$langs->trans('Save').'">&nbsp;';
-		print '<input type="submit" class="button" name="cancel" value="'.$langs->trans("Cancel").'"></center>';
+		print '<div class="center">';
+		print '<input type="submit" class="button" value="'.$langs->trans('Save').'">';
+		print '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+		print '<input type="submit" class="button" name="cancel" value="'.$langs->trans("Cancel").'">';
+		print '</div>';
 		print '</form>';
 	}
 
@@ -499,15 +614,43 @@ if ($id > 0 || $ref)
 	 */
 	if ($action == "transfert")
 	{
+	    $pdluoid=GETPOST('pdluoid','int');
+
+	    if ($pdluoid > 0)
+	    {
+	        $pdluo = new Productbatch($db);
+	        $result=$pdluo->fetch($pdluoid);
+
+	        if ($result > 0)
+	        {
+	            $pdluoid=$pdluo->id;
+	        }
+	        else
+	        {
+	            dol_print_error($db);
+	        }
+	    }
+
 		print_titre($langs->trans("StockTransfer"));
 		print '<form action="'.$_SERVER["PHP_SELF"].'?id='.$product->id.'" method="post">'."\n";
 		print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
 		print '<input type="hidden" name="action" value="transfert_stock">';
+		if ($pdluoid)
+		{
+		    print '<input type="hidden" name="pdluoid" value="'.$pdluoid.'">';
+		}
 		print '<table class="border" width="100%">';
 
 		print '<tr>';
 		print '<td width="20%" class="fieldrequired">'.$langs->trans("WarehouseSource").'</td><td width="20%">';
-		print $formproduct->selectWarehouses(($_GET["dwid"]?$_GET["dwid"]:GETPOST('id_entrepot_source')),'id_entrepot_source','',1);
+		if ($pdluoid)
+		{
+		    print $formproduct->selectWarehouses($pdluo->warehouseid,'id_entrepot_source','',1,1);
+		}
+		else
+		{
+            print $formproduct->selectWarehouses(($_GET["dwid"]?$_GET["dwid"]:GETPOST('id_entrepot_source')),'id_entrepot_source','',1);
+		}
 		print '</td>';
 		print '<td width="20%" class="fieldrequired">'.$langs->trans("WarehouseTarget").'</td><td width="20%">';
 		print $formproduct->selectWarehouses(GETPOST('id_entrepot_destination'),'id_entrepot_destination','',1);
@@ -525,8 +668,11 @@ if ($id > 0 || $ref)
 
 		print '</table>';
 
-		print '<center><input type="submit" class="button" value="'.dol_escape_htmltag($langs->trans('Save')).'">&nbsp;';
-		print '<input type="submit" class="button" name="cancel" value="'.dol_escape_htmltag($langs->trans("Cancel")).'"></center>';
+		print '<div class="center">';
+		print '<input type="submit" class="button" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
+		print '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+		print '<input type="submit" class="button" name="cancel" value="'.dol_escape_htmltag($langs->trans("Cancel")).'">';
+		print '</div>';
 
 		print '</form>';
 	}
@@ -586,7 +732,7 @@ if (empty($action) && $product->id)
 
 
 /*
- * Contenu des stocks
+ * Stock detail
  */
 print '<br><table class="noborder" width="100%">';
 print '<tr class="liste_titre"><td width="40%" colspan="4">'.$langs->trans("Warehouse").'</td>';
@@ -657,12 +803,34 @@ if ($resql)
 			if ($details<0) dol_print_error($db);
 			foreach ($details as $pdluo)
 			{
-				print "\n".'<tr><td></td>';
-				print '<td align="right">'.$pdluo->batch.'</td>';
-				print '<td align="right">'. dol_print_date($pdluo->eatby,'day') .'</td>';
-				print '<td align="right">'. dol_print_date($pdluo->sellby,'day') .'</td>';
-				print '<td align="right">'.$pdluo->qty.($pdluo->qty<0?' '.img_warning():'').'</td>';
-				print '<td colspan="4"></td></tr>';
+			    if ( $action == 'editline' && GETPOST('lineid',int)==$pdluo->id )
+			    { //Current line edit
+			        print "\n".'<tr><td colspan="9">';
+			        print '<form action="'.$_SERVER["PHP_SELF"].'" method="POST"><input type="hidden" name="pdluoid" value="'.$pdluo->id.'"><input type="hidden" name="action" value="updateline"><input type="hidden" name="id" value="'.$id.'"><table class="noborder" width="100%"><tr><td width="10%"></td>';
+			        print '<td align="right" width="10%"><input type="text" name="batch_number" value="'.$pdluo->batch.'"></td>';
+			        print '<td align="right" width="10%">';
+			        $form->select_date($pdluo->eatby,'eatby','','',1,"");
+			        print '</td>';
+			        print '<td align="right" width="10%">';
+			        $form->select_date($pdluo->sellby,'sellby','','',1,"");
+			        print '</td>';
+			        print '<td align="right" width="10%">'.$pdluo->qty.($pdluo->qty<0?' '.img_warning():'').'</td>';
+			        print '<td colspan="4"><input type="submit" class="button" id="savelinebutton" name="save" value="'.$langs->trans("Save").'">';
+		            print '<input type="submit" class="button" id="cancellinebutton" name="Cancel" value="'.$langs->trans("Cancel").'"></td></tr>';
+			        print '</table></form>';
+			    }
+			    else
+			    {
+                    print "\n".'<tr><td align="right">';
+                    print '<a href="'.$_SERVER["PHP_SELF"].'?id='.$product->id.'&amp;action=transfert&amp;pdluoid='.$pdluo->id.'">'.$langs->trans("StockMovement").'</a>';
+                    print '<a href="'.$_SERVER["PHP_SELF"].'?id='.$id.'&amp;action=editline&amp;lineid='.$pdluo->id.'#'.$pdluo->id.'">';
+                    print img_edit().'</a></td>';
+                    print '<td align="right">'.$pdluo->batch.'</td>';
+                    print '<td align="right">'. dol_print_date($pdluo->eatby,'day') .'</td>';
+                    print '<td align="right">'. dol_print_date($pdluo->sellby,'day') .'</td>';
+                    print '<td align="right">'.$pdluo->qty.($pdluo->qty<0?' '.img_warning():'').'</td>';
+                    print '<td colspan="4"></td></tr>';
+			    }
 			}
 		}
 		$i++;
